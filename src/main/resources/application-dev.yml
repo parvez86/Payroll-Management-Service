@@ -1,0 +1,46 @@
+spring:
+  # Development Database Configuration (H2 for local development)
+  datasource:
+    url: jdbc:h2:mem:payroll_dev;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  
+  # H2 Console for Development
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+  
+  # JPA Configuration for Development
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+    show-sql: true
+  
+  # Liquibase for Development
+  liquibase:
+    contexts: dev
+    drop-first: true # Allow dropping tables in development
+
+# Development JWT Configuration
+app:
+  jwt:
+    secret: DevSecretKeyForPayrollSystemTesting2024
+    expiration: 3600000 # 1 hour for development
+
+# Development Logging
+logging:
+  level:
+    org.sp.payroll_service: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    liquibase: DEBUG
+    org.springframework.transaction: DEBUG

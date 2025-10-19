@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <!-- Create Users Table -->
+    <changeSet id="001-001" author="payroll-dev">
+        <createTable tableName="users">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="email" type="VARCHAR(100)">
+                <constraints unique="true"/>
+            </column>
+            <column name="password_hash" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Audit Fields -->
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Create Companies Table -->
+    <changeSet id="001-002" author="payroll-dev">
+        <createTable tableName="companies">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <!-- Audit Fields -->
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Create Banks Table -->
+    <changeSet id="001-003" author="payroll-dev">
+        <createTable tableName="banks">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="swiftBicCode" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <!-- Audit Fields -->
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Create Branches Table -->
+    <changeSet id="001-004" author="payroll-dev">
+        <createTable tableName="branch">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="branch_name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="address" type="TEXT"/>
+            <column name="bank_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Audit Fields -->
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+        
+        <!-- Add Foreign Key for Bank -->
+        <addForeignKeyConstraint
+                baseTableName="branch"
+                baseColumnNames="bank_id"
+                constraintName="fk_branch_bank"
+                referencedTableName="banks"
+                referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- Create Grades Table -->
+    <changeSet id="001-005" author="payroll-dev">
+        <createTable tableName="grades">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="parent" type="UUID"/>
+            <column name="rank" type="INTEGER" defaultValue="1">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Audit Fields -->
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+        
+        <!-- Add Self-Referencing Foreign Key for Parent Grade -->
+        <addForeignKeyConstraint
+                baseTableName="grades"
+                baseColumnNames="parent"
+                constraintName="fk_grade_parent"
+                referencedTableName="grades"
+                referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- Create Accounts Table -->
+    <changeSet id="001-006" author="payroll-dev">
+        <createTable tableName="accounts">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="owner_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="account_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="account_name" type="VARCHAR(100)"/>
+            <column name="account_number" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="current_balance" type="DECIMAL(19,4)" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="overdraft_limit" type="DECIMAL(19,4)" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="branch_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Audit Fields -->
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+        
+        <!-- Add Foreign Key for Branch -->
+        <addForeignKeyConstraint
+                baseTableName="accounts"
+                baseColumnNames="branch_id"
+                constraintName="fk_account_branch"
+                referencedTableName="branch"
+                referencedColumnNames="id"/>
+    </changeSet>
+
+</databaseChangeLog>

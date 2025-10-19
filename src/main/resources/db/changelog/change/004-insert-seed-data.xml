@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <!-- Insert Seed Data for Development and Testing -->
+    <changeSet id="004-001" author="payroll-dev">
+        
+        <!-- Insert Banks -->
+        <insert tableName="banks">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="name" value="Bangladesh Bank"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+        
+        <insert tableName="banks">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="name" value="Sonali Bank"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+        
+        <insert tableName="banks">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="name" value="Dutch Bangla Bank"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+
+    </changeSet>
+
+    <changeSet id="004-002" author="payroll-dev">
+        
+        <!-- Insert Branches (Using bank IDs from previous insert) -->
+        <insert tableName="branch">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="branch_name" value="Motijheel Branch"/>
+            <column name="address" value="Motijheel Commercial Area, Dhaka"/>
+            <column name="bank_id" valueComputed="(SELECT id FROM banks WHERE name = 'Bangladesh Bank' LIMIT 1)"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+        
+        <insert tableName="branch">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="branch_name" value="Dhanmondi Branch"/>
+            <column name="address" value="Dhanmondi Road 27, Dhaka"/>
+            <column name="bank_id" valueComputed="(SELECT id FROM banks WHERE name = 'Sonali Bank' LIMIT 1)"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+        
+        <insert tableName="branch">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="branch_name" value="Gulshan Branch"/>
+            <column name="address" value="Gulshan Avenue, Dhaka"/>
+            <column name="bank_id" valueComputed="(SELECT id FROM banks WHERE name = 'Dutch Bangla Bank' LIMIT 1)"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+
+    </changeSet>
+
+    <changeSet id="004-003" author="payroll-dev">
+        
+        <!-- Insert Company -->
+        <insert tableName="companies">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="name" value="TechCorp Bangladesh Ltd"/>
+            <column name="description" value="Leading software development company in Bangladesh"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+
+    </changeSet>
+
+    <changeSet id="004-004" author="payroll-dev">
+        
+        <!-- Insert Grades (Following the exact SRS requirement: 1,1,2,2,2,2 distribution) -->
+        <insert tableName="grades">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="name" value="Grade 1"/>
+            <column name="rank" value="1"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+        
+        <insert tableName="grades">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="name" value="Grade 2"/>
+            <column name="rank" value="2"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+        
+        <insert tableName="grades">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="name" value="Grade 3"/>
+            <column name="rank" value="3"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+        
+        <insert tableName="grades">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="name" value="Grade 4"/>
+            <column name="rank" value="4"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+        
+        <insert tableName="grades">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="name" value="Grade 5"/>
+            <column name="rank" value="5"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+        
+        <insert tableName="grades">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="name" value="Grade 6"/>
+            <column name="rank" value="6"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+
+    </changeSet>
+
+    <changeSet id="004-005" author="payroll-dev">
+        
+        <!-- Insert Admin User -->
+        <insert tableName="users">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="username" value="admin"/>
+            <column name="email" value="admin@techcorp.com"/>
+            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6"/> <!-- 'admin123' bcrypted -->
+            <column name="role" value="ADMIN"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+
+    </changeSet>
+
+    <changeSet id="004-006" author="payroll-dev">
+        
+        <!-- Insert Company Account -->
+        <insert tableName="accounts">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="owner_type" value="COMPANY"/>
+            <column name="owner_id" value="1"/> <!-- Company ID -->
+            <column name="account_type" value="CURRENT"/>
+            <column name="account_name" value="TechCorp Main Account"/>
+            <column name="account_number" value="COMP001"/>
+            <column name="current_balance" value="1000000.0000"/> <!-- 10 Lakh initial balance -->
+            <column name="overdraft_limit" value="0.0000"/>
+            <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Motijheel Branch' LIMIT 1)"/>
+            <column name="created_at" valueComputed="NOW()"/>
+        </insert>
+
+    </changeSet>
+
+</databaseChangeLog>

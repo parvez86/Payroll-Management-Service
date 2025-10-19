@@ -1,0 +1,99 @@
+spring:
+  application:
+    name: Payroll Management Service
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payroll_db
+    username: payroll_user
+    password: payroll_pass
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: PayrollHikariPool
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 60000
+      idle-timeout: 300000
+      max-lifetime: 900000
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: validate # Let Liquibase handle schema
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        show_sql: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+    open-in-view: false # Prevent lazy loading issues
+  
+  # Liquibase Configuration
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    default-schema: public
+    drop-first: false
+  
+  # Security Configuration
+  security:
+    user:
+      name: admin
+      password: admin123
+      roles: ADMIN
+  
+  # JSON Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: Asia/Dhaka
+
+# Application Configuration
+app:
+  jwt:
+    secret: ${JWT_SECRET:MySecretKeyForPayrollSystemThatIsLongEnoughForSecurity2024}
+    expiration: 86400000 # 24 hours in milliseconds
+    issuer: PayrollManagementSystem
+  
+  payroll:
+    grade6-base-salary: 50000.00 # Grade 6 base salary in BDT
+    hra-percentage: 0.20 # 20% of basic
+    medical-percentage: 0.15 # 15% of basic
+    grade-increment: 5000.00 # Increment per grade level
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Logging Configuration
+logging:
+  level:
+    org.sp.payroll_service: INFO
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    liquibase: INFO
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Management and Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,liquibase
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    db:
+      enabled: true

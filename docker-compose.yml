@@ -1,0 +1,103 @@
+# Payroll Management System - Docker Compose
+#version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: payroll-postgres
+    environment:
+      POSTGRES_DB: payroll_db
+      POSTGRES_USER: payroll_user
+      POSTGRES_PASSWORD: payroll_pass
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - payroll-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payroll_user -d payroll_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache (Optional for session management)
+  redis:
+    image: redis:7-alpine
+    container_name: payroll-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - payroll-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Payroll Service Backend
+  payroll-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: payroll-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payroll_db
+      SPRING_DATASOURCE_USERNAME: payroll_user
+      SPRING_DATASOURCE_PASSWORD: payroll_pass
+      JWT_SECRET: DockerSecretKeyForPayrollSystemProduction2024
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - payroll-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # pgAdmin for Database Management (Development Only)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: payroll-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@payroll.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - payroll-network
+    restart: unless-stopped
+    profiles:
+      - dev
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  payroll-network:
+    driver: bridge

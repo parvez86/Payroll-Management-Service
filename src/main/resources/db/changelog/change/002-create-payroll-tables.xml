@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <!-- Create Employees Table -->
+    <changeSet id="002-001" author="payroll-dev">
+        <createTable tableName="employees">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="biz_id" type="VARCHAR(4)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="account_id" type="UUID">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="grade_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="employee_code" type="VARCHAR(4)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="address" type="TEXT"/>
+            <column name="mobile" type="VARCHAR(20)"/>
+            <!-- Audit Fields -->
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+        
+        <!-- Add Foreign Keys -->
+        <addForeignKeyConstraint
+                baseTableName="employees"
+                baseColumnNames="user_id"
+                constraintName="fk_employee_user"
+                referencedTableName="users"
+                referencedColumnNames="id"/>
+                
+        <addForeignKeyConstraint
+                baseTableName="employees"
+                baseColumnNames="account_id"
+                constraintName="fk_employee_account"
+                referencedTableName="accounts"
+                referencedColumnNames="id"/>
+                
+        <addForeignKeyConstraint
+                baseTableName="employees"
+                baseColumnNames="grade_id"
+                constraintName="fk_employee_grade"
+                referencedTableName="grades"
+                referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- Create Payroll Batches Table -->
+    <changeSet id="002-002" author="payroll-dev">
+        <createTable tableName="payroll_batches">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payroll_month" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payroll_status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_amount" type="DECIMAL(19,4)"/>
+            <column name="processed_at" type="TIMESTAMP"/>
+            <column name="failure_reason" type="TEXT"/>
+            <!-- Audit Fields -->
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Create Payroll Items Table -->
+    <changeSet id="002-003" author="payroll-dev">
+        <createTable tableName="payroll_items">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="batch_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="employee_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="net_amount" type="DECIMAL(19,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="gross_salary" type="DECIMAL(19,4)"/>
+            <column name="basics" type="DECIMAL(19,4)"/>
+            <column name="hra" type="DECIMAL(19,4)"/>
+            <column name="medical_allowance" type="DECIMAL(19,4)"/>
+            <column name="payroll_item_status" type="VARCHAR(20)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="failure_reason" type="TEXT"/>
+            <!-- Audit Fields -->
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+        
+        <!-- Add Foreign Keys -->
+        <addForeignKeyConstraint
+                baseTableName="payroll_items"
+                baseColumnNames="batch_id"
+                constraintName="fk_payroll_item_batch"
+                referencedTableName="payroll_batches"
+                referencedColumnNames="id"/>
+                
+        <addForeignKeyConstraint
+                baseTableName="payroll_items"
+                baseColumnNames="employee_id"
+                constraintName="fk_payroll_item_employee"
+                referencedTableName="employees"
+                referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- Create Transaction Ledgers Table -->
+    <changeSet id="002-004" author="payroll-dev">
+        <createTable tableName="transaction_ledgers">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="account_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="batch_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="DECIMAL(19,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reference_id" type="VARCHAR(100)">
+                <constraints unique="true"/>
+            </column>
+            <column name="transaction_status" type="VARCHAR(20)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <!-- Audit Fields -->
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+        
+        <!-- Add Foreign Keys -->
+        <addForeignKeyConstraint
+                baseTableName="transaction_ledgers"
+                baseColumnNames="account_id"
+                constraintName="fk_transaction_account"
+                referencedTableName="accounts"
+                referencedColumnNames="id"/>
+                
+        <addForeignKeyConstraint
+                baseTableName="transaction_ledgers"
+                baseColumnNames="batch_id"
+                constraintName="fk_transaction_batch"
+                referencedTableName="payroll_batches"
+                referencedColumnNames="id"/>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <!-- Performance and Security Indexes -->
+    <changeSet id="003-001" author="payroll-dev">
+        
+        <!-- Employee Indexes -->
+        <createIndex tableName="employees" indexName="idx_employee_biz_id">
+            <column name="biz_id"/>
+        </createIndex>
+        
+        <createIndex tableName="employees" indexName="idx_employee_grade">
+            <column name="grade_id"/>
+        </createIndex>
+        
+        <createIndex tableName="employees" indexName="idx_employee_code">
+            <column name="employee_code"/>
+        </createIndex>
+
+        <!-- Account Indexes -->
+        <createIndex tableName="accounts" indexName="idx_account_owner">
+            <column name="owner_type"/>
+            <column name="owner_id"/>
+        </createIndex>
+        
+        <createIndex tableName="accounts" indexName="idx_account_number">
+            <column name="account_number"/>
+        </createIndex>
+
+        <!-- Payroll Batch Indexes -->
+        <createIndex tableName="payroll_batches" indexName="idx_payroll_batch_month">
+            <column name="payroll_month"/>
+        </createIndex>
+        
+        <createIndex tableName="payroll_batches" indexName="idx_payroll_batch_status">
+            <column name="status"/>
+        </createIndex>
+
+        <!-- Payroll Item Indexes -->
+        <createIndex tableName="payroll_items" indexName="idx_payroll_item_batch">
+            <column name="batch_id"/>
+        </createIndex>
+        
+        <createIndex tableName="payroll_items" indexName="idx_payroll_item_employee">
+            <column name="employee_id"/>
+        </createIndex>
+        
+        <createIndex tableName="payroll_items" indexName="idx_payroll_item_status">
+            <column name="status"/>
+        </createIndex>
+
+        <!-- Transaction Ledger Indexes -->
+        <createIndex tableName="transaction_ledgers" indexName="idx_transaction_account">
+            <column name="account_id"/>
+        </createIndex>
+        
+        <createIndex tableName="transaction_ledgers" indexName="idx_transaction_batch">
+            <column name="batch_id"/>
+        </createIndex>
+        
+        <createIndex tableName="transaction_ledgers" indexName="idx_transaction_status">
+            <column name="status"/>
+        </createIndex>
+        
+        <createIndex tableName="transaction_ledgers" indexName="idx_transaction_type_category">
+            <column name="type"/>
+            <column name="category"/>
+        </createIndex>
+
+        <!-- User Indexes -->
+        <createIndex tableName="users" indexName="idx_user_username">
+            <column name="username"/>
+        </createIndex>
+        
+        <createIndex tableName="users" indexName="idx_user_email">
+            <column name="email"/>
+        </createIndex>
+
+        <!-- Grade Indexes -->
+        <createIndex tableName="grades" indexName="idx_grade_rank">
+            <column name="rank"/>
+        </createIndex>
+
+        <!-- Audit Trail Indexes -->
+        <createIndex tableName="users" indexName="idx_user_created_at">
+            <column name="created_at"/>
+        </createIndex>
+        
+        <createIndex tableName="transaction_ledgers" indexName="idx_transaction_created_at">
+            <column name="created_at"/>
+        </createIndex>
+        
+        <createIndex tableName="payroll_batches" indexName="idx_payroll_batch_created_at">
+            <column name="created_at"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>

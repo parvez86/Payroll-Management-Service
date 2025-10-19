@@ -1,0 +1,53 @@
+spring:
+  # Docker Database Configuration
+  datasource:
+    url: jdbc:postgresql://postgres:5432/payroll_db
+    username: payroll_user
+    password: payroll_pass
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: PayrollDockerHikariPool
+      maximum-pool-size: 15
+      minimum-idle: 5
+      connection-timeout: 60000
+      idle-timeout: 300000
+      max-lifetime: 900000
+  
+  # Redis Configuration for Session Management
+  data:
+    redis:
+      host: redis
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+  
+  # JPA Configuration for Docker
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: false
+        generate_statistics: true
+    open-in-view: false
+
+# Docker JWT Configuration
+app:
+  jwt:
+    secret: ${JWT_SECRET:DockerSecretKeyForPayrollSystemProduction2024}
+    expiration: 86400000
+
+# Docker Logging
+logging:
+  level:
+    org.sp.payroll_service: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    liquibase: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
