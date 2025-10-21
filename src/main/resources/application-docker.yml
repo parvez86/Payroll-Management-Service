@@ -83,7 +83,7 @@ app:
 server:
   port: 20001
   servlet:
-    context-path: /pms/v1/api
+    context-path: /pms
   error:
     include-message: always
     include-binding-errors: always

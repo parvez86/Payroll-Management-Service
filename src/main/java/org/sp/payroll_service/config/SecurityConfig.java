@@ -63,22 +63,14 @@ public class SecurityConfig {
 
     private void configureAuthorization(AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth) {
         auth
-                // Authentication endpoints (public access)
-                .requestMatchers(HttpMethod.POST, "/pms/v1/api/auth/login").permitAll()
-                .requestMatchers(HttpMethod.POST, "/pms/v1/api/auth/register").permitAll()
+                // Public authentication endpoints (no token required)
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
                 
                 // Actuator health checks for monitoring
-                .requestMatchers("/pms/v1/api/actuator/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 
                 // Swagger UI and API documentation (public access)
-                .requestMatchers("/pms/v1/api/v3/api-docs/**").permitAll()
-                .requestMatchers("/pms/v1/api/swagger-ui/**").permitAll()
-                .requestMatchers("/pms/v1/api/swagger-ui.html").permitAll()
-                .requestMatchers("/pms/v1/api/swagger-resources/**").permitAll()
-                .requestMatchers("/pms/v1/api/webjars/**").permitAll()
-                
-                // Alternative Swagger paths (without context path)
                 .requestMatchers("/v3/api-docs/**").permitAll()
                 .requestMatchers("/swagger-ui/**").permitAll()
                 .requestMatchers("/swagger-ui.html").permitAll()
@@ -87,7 +79,6 @@ public class SecurityConfig {
                 
                 // Health check endpoints
                 .requestMatchers("/health").permitAll()
-                .requestMatchers("/pms/v1/api/health").permitAll()
                 
                 // All other requests require authentication
                 .anyRequest().authenticated();

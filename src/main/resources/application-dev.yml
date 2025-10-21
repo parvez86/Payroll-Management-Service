@@ -29,6 +29,11 @@ spring:
     contexts: dev
     drop-first: true # Allow dropping tables in development
 
+server:
+  port: 20001
+  servlet:
+    context-path: /pms
+
 # Development JWT Configuration
 app:
   jwt:
