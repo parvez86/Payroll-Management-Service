@@ -3,10 +3,9 @@
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
 
-    <!-- Create Users Table -->
-    <changeSet id="001-001" author="payroll-dev">
+    <changeSet id="001-001-create-users" author="payroll-dev">
         <createTable tableName="users">
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
                 <constraints primaryKey="true" nullable="false"/>
@@ -23,44 +22,25 @@
             <column name="role" type="VARCHAR(20)">
                 <constraints nullable="false"/>
             </column>
-            <!-- Audit Fields -->
             <column name="version" type="BIGINT" defaultValue="0">
                 <constraints nullable="false"/>
             </column>
-            <column name="created_at" type="TIMESTAMP">
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="UUID"/>
             <column name="updated_at" type="TIMESTAMP"/>
             <column name="updated_by" type="UUID"/>
         </createTable>
+        <rollback>
+            <dropTable tableName="users"/>
+        </rollback>
     </changeSet>
 
-    <!-- Create Companies Table -->
-    <changeSet id="001-002" author="payroll-dev">
-        <createTable tableName="companies">
-            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
-                <constraints primaryKey="true" nullable="false"/>
-            </column>
-            <column name="name" type="VARCHAR(100)">
-                <constraints nullable="false" unique="true"/>
-            </column>
-            <column name="description" type="TEXT"/>
-            <!-- Audit Fields -->
-            <column name="version" type="BIGINT" defaultValue="0">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_at" type="TIMESTAMP">
-                <constraints nullable="false"/>
-            </column>
-            <column name="created_by" type="UUID"/>
-            <column name="updated_at" type="TIMESTAMP"/>
-            <column name="updated_by" type="UUID"/>
-        </createTable>
-    </changeSet>
-
-    <!-- Create Banks Table -->
-    <changeSet id="001-003" author="payroll-dev">
+    <changeSet id="001-002-create-banks" author="payroll-dev">
         <createTable tableName="banks">
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
                 <constraints primaryKey="true" nullable="false"/>
@@ -68,24 +48,31 @@
             <column name="name" type="VARCHAR(100)">
                 <constraints nullable="false" unique="true"/>
             </column>
-            <column name="swiftBicCode" type="VARCHAR(100)">
+            <column name="country_code" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="swift_bic_code" type="VARCHAR(100)">
                 <constraints nullable="false" unique="true"/>
             </column>
-            <!-- Audit Fields -->
             <column name="version" type="BIGINT" defaultValue="0">
                 <constraints nullable="false"/>
             </column>
-            <column name="created_at" type="TIMESTAMP">
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="UUID"/>
             <column name="updated_at" type="TIMESTAMP"/>
             <column name="updated_by" type="UUID"/>
         </createTable>
+        <rollback>
+            <dropTable tableName="banks"/>
+        </rollback>
     </changeSet>
 
-    <!-- Create Branches Table -->
-    <changeSet id="001-004" author="payroll-dev">
+    <changeSet id="001-003-create-branches" author="payroll-dev">
         <createTable tableName="branch">
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
                 <constraints primaryKey="true" nullable="false"/>
@@ -97,29 +84,34 @@
             <column name="bank_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
-            <!-- Audit Fields -->
             <column name="version" type="BIGINT" defaultValue="0">
                 <constraints nullable="false"/>
             </column>
-            <column name="created_at" type="TIMESTAMP">
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="UUID"/>
             <column name="updated_at" type="TIMESTAMP"/>
             <column name="updated_by" type="UUID"/>
         </createTable>
-        
-        <!-- Add Foreign Key for Bank -->
+
         <addForeignKeyConstraint
                 baseTableName="branch"
                 baseColumnNames="bank_id"
                 constraintName="fk_branch_bank"
                 referencedTableName="banks"
-                referencedColumnNames="id"/>
+                referencedColumnNames="id"
+                onDelete="CASCADE"/> 
+        
+        <rollback>
+            <dropTable tableName="branch"/>
+        </rollback>
     </changeSet>
 
-    <!-- Create Grades Table -->
-    <changeSet id="001-005" author="payroll-dev">
+    <changeSet id="001-004-create-grades" author="payroll-dev">
         <createTable tableName="grades">
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
                 <constraints primaryKey="true" nullable="false"/>
@@ -127,15 +119,95 @@
             <column name="name" type="VARCHAR(50)">
                 <constraints nullable="false" unique="true"/>
             </column>
-            <column name="parent" type="UUID"/>
+            <column name="parent_id" type="UUID"/>
             <column name="rank" type="INTEGER" defaultValue="1">
                 <constraints nullable="false"/>
             </column>
-            <!-- Audit Fields -->
+            <column name="basic_salary" type="DECIMAL(19,2)" defaultValue="50000.00">
+                <constraints nullable="false"/>
+            </column>
             <column name="version" type="BIGINT" defaultValue="0">
                 <constraints nullable="false"/>
             </column>
-            <column name="created_at" type="TIMESTAMP">
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="grades"
+                baseColumnNames="parent_id"
+                constraintName="fk_grade_parent"
+                referencedTableName="grades"
+                referencedColumnNames="id"
+                onDelete="SET NULL"/>
+        
+        <rollback>
+            <dropTable tableName="grades"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="001-005-create-formulas" author="payroll-dev">
+        <createTable tableName="salary_distribution_formulas">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/> </column>
+            <column name="base_salary_grade" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="hra_percentage" type="DECIMAL(5,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="medical_percentage" type="DECIMAL(5,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="grade_increment_amount" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+        <rollback>
+            <dropTable tableName="salary_distribution_formulas"/>
+        </rollback>
+    </changeSet>
+    
+    <changeSet id="001-006-create-companies" author="payroll-dev">
+        <createTable tableName="companies">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="salary_formula_id" type="UUID">
+                <constraints nullable="false"/> </column>
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="UUID"/>
@@ -143,17 +215,12 @@
             <column name="updated_by" type="UUID"/>
         </createTable>
         
-        <!-- Add Self-Referencing Foreign Key for Parent Grade -->
-        <addForeignKeyConstraint
-                baseTableName="grades"
-                baseColumnNames="parent"
-                constraintName="fk_grade_parent"
-                referencedTableName="grades"
-                referencedColumnNames="id"/>
+        <rollback>
+            <dropTable tableName="companies"/>
+        </rollback>
     </changeSet>
 
-    <!-- Create Accounts Table -->
-    <changeSet id="001-006" author="payroll-dev">
+    <changeSet id="001-007-create-accounts" author="payroll-dev">
         <createTable tableName="accounts">
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
                 <constraints primaryKey="true" nullable="false"/>
@@ -180,11 +247,13 @@
             <column name="branch_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
-            <!-- Audit Fields -->
             <column name="version" type="BIGINT" defaultValue="0">
                 <constraints nullable="false"/>
             </column>
-            <column name="created_at" type="TIMESTAMP">
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="UUID"/>
@@ -192,13 +261,74 @@
             <column name="updated_by" type="UUID"/>
         </createTable>
         
-        <!-- Add Foreign Key for Branch -->
         <addForeignKeyConstraint
                 baseTableName="accounts"
                 baseColumnNames="branch_id"
                 constraintName="fk_account_branch"
                 referencedTableName="branch"
-                referencedColumnNames="id"/>
+                referencedColumnNames="id"
+                onDelete="RESTRICT"/>
+        
+        <rollback>
+            <dropTable tableName="accounts"/>
+        </rollback>
+    </changeSet>
+    
+    <changeSet id="001-008-add-fks-to-companies" author="payroll-dev">
+        <comment>Adding Foreign Key constraints to the companies table.</comment>
+
+        <addForeignKeyConstraint
+            baseTableName="companies"
+            baseColumnNames="salary_formula_id"
+            constraintName="fk_company_salary_formula"
+            referencedTableName="salary_distribution_formulas"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+            
+        <addForeignKeyConstraint
+            baseTableName="companies"
+            baseColumnNames="created_by"
+            constraintName="fk_company_created_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <addForeignKeyConstraint
+            baseTableName="companies"
+            baseColumnNames="updated_by"
+            constraintName="fk_company_updated_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+            
+        <addColumn tableName="companies">
+            <column name="main_account_id" type="UUID" remarks="Foreign key to the main payroll account for this company.">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        
+        <addForeignKeyConstraint 
+            baseColumnNames="main_account_id"
+            baseTableName="companies"
+            constraintName="fk_company_main_account"
+            onDelete="RESTRICT"
+            onUpdate="RESTRICT"
+            referencedColumnNames="id"
+            referencedTableName="accounts"/>
+
+        <addUniqueConstraint 
+            columnNames="main_account_id"
+            tableName="companies"
+            constraintName="uc_company_main_account"/>
+        
+        <rollback>
+            <dropForeignKeyConstraint baseTableName="companies" constraintName="fk_company_salary_formula"/>
+            <dropForeignKeyConstraint baseTableName="companies" constraintName="fk_company_created_by"/>
+            <dropForeignKeyConstraint baseTableName="companies" constraintName="fk_company_updated_by"/>
+            <dropForeignKeyConstraint baseTableName="companies" constraintName="fk_company_main_account"/>
+            <dropUniqueConstraint tableName="companies" constraintName="uc_company_main_account"/>
+            <dropColumn tableName="companies" columnName="main_account_id"/>
+        </rollback>
     </changeSet>
 
 </databaseChangeLog>

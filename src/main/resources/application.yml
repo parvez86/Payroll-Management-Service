@@ -1,6 +1,10 @@
 spring:
   application:
     name: Payroll Management Service
+  loom:
+    enabled: true
+    executor:
+      type: virtual-thread
   
   # Database Configuration
   datasource:
@@ -36,7 +40,8 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
     default-schema: public
-    drop-first: false
+    drop-first: false  # false -> preserve data
+#    enabled: false
   
   # Security Configuration
   security:
@@ -54,8 +59,10 @@ spring:
 # Application Configuration
 app:
   jwt:
+    header-prefix: Bearer
     secret: ${JWT_SECRET:MySecretKeyForPayrollSystemThatIsLongEnoughForSecurity2024}
-    expiration: 86400000 # 24 hours in milliseconds
+    expiration: 86400000 # 24 hours in milliseconds (access token)
+    refresh-expiration: 604800000 # 7 days in milliseconds (refresh token)
     issuer: PayrollManagementSystem
   
   payroll:
@@ -66,9 +73,9 @@ app:
 
 # Server Configuration
 server:
-  port: 8080
+  port: 20001
   servlet:
-    context-path: /api
+    context-path: /pms
   error:
     include-message: always
     include-binding-errors: always

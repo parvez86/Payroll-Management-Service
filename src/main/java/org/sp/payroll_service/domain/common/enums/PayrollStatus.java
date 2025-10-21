@@ -4,5 +4,7 @@ public enum PayrollStatus {
     PENDING,
     PROCESSING,
     COMPLETED,
-    FAILED
+    PARTIALLY_COMPLETED,
+    FAILED,
+    CANCELLED
 }

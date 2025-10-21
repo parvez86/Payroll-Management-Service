@@ -7,7 +7,7 @@ import java.util.List;
 
 /**
  * API response wrapper record.
- * @param success operation success status
+ * @param success operation success transactionStatus
  * @param message response message
  * @param data response data
  * @param errors list of errors

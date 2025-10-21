@@ -4,7 +4,7 @@
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: payroll-postgres
     environment:
       POSTGRES_DB: payroll_db
@@ -25,23 +25,23 @@ services:
       timeout: 10s
       retries: 3
 
-  # Redis Cache (Optional for session management)
-  redis:
-    image: redis:7-alpine
-    container_name: payroll-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - payroll-network
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # Redis Cache (Optional for session management) - COMMENTED OUT
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: payroll-redis
+  #   ports:
+  #     - "6380:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - payroll-network
+  #   restart: unless-stopped
+  #   command: redis-server --appendonly yes
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
 
   # Payroll Service Backend
   payroll-service:
@@ -55,20 +55,27 @@ services:
       SPRING_DATASOURCE_USERNAME: payroll_user
       SPRING_DATASOURCE_PASSWORD: payroll_pass
       JWT_SECRET: DockerSecretKeyForPayrollSystemProduction2024
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PORT: 6379
+      # SPRING_REDIS_HOST: redis
+      # SPRING_REDIS_PORT: 6379
+      # Logging configuration for Docker
+      LOGGING_LEVEL_ORG_SP_PAYROLL_SERVICE: INFO
+      LOGGING_PATTERN_CONSOLE: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
     ports:
-      - "8080:8080"
+      - "20001:20001"
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+      # redis:
+      #   condition: service_healthy
     networks:
       - payroll-network
     restart: unless-stopped
+    labels:
+      - "description=Payroll Management System Backend API"
+      - "swagger-url=http://localhost:20001/pms/v1/api/swagger-ui/index.html"
+      - "health-check=http://localhost:20001/pms/v1/api/actuator/health"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:20001/pms/v1/api/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -95,8 +102,8 @@ services:
 volumes:
   postgres_data:
     driver: local
-  redis_data:
-    driver: local
+  # redis_data:
+  #   driver: local
 
 networks:
   payroll-network:

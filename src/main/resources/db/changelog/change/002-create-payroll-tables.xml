@@ -1,12 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <databaseChangeLog
-        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
-
-    <!-- Create Employees Table -->
-    <changeSet id="002-001" author="payroll-dev">
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd"> <changeSet id="009-create-employees-table" author="payroll-service">
+        <comment>Create employees table for employee management</comment>
         <createTable tableName="employees">
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
                 <constraints primaryKey="true" nullable="false"/>
@@ -14,8 +12,8 @@
             <column name="user_id" type="UUID">
                 <constraints nullable="false" unique="true"/>
             </column>
-            <column name="biz_id" type="VARCHAR(4)">
-                <constraints nullable="false" unique="true"/>
+            <column name="company_id" type="UUID">
+                <constraints nullable="false"/>
             </column>
             <column name="account_id" type="UUID">
                 <constraints nullable="false" unique="true"/>
@@ -23,7 +21,7 @@
             <column name="grade_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
-            <column name="employee_code" type="VARCHAR(4)">
+            <column name="code" type="VARCHAR(4)">
                 <constraints nullable="false" unique="true"/>
             </column>
             <column name="name" type="VARCHAR(100)">
@@ -31,78 +29,174 @@
             </column>
             <column name="address" type="TEXT"/>
             <column name="mobile" type="VARCHAR(20)"/>
-            <!-- Audit Fields -->
+            
             <column name="version" type="BIGINT" defaultValue="0">
                 <constraints nullable="false"/>
             </column>
-            <column name="created_at" type="TIMESTAMP">
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="UUID"/>
-            <column name="updated_at" type="TIMESTAMP"/>
             <column name="updated_by" type="UUID"/>
         </createTable>
         
-        <!-- Add Foreign Keys -->
         <addForeignKeyConstraint
-                baseTableName="employees"
-                baseColumnNames="user_id"
-                constraintName="fk_employee_user"
-                referencedTableName="users"
-                referencedColumnNames="id"/>
-                
+            baseTableName="employees"
+            baseColumnNames="user_id"
+            constraintName="fk_employee_user"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+            
         <addForeignKeyConstraint
-                baseTableName="employees"
-                baseColumnNames="account_id"
-                constraintName="fk_employee_account"
-                referencedTableName="accounts"
-                referencedColumnNames="id"/>
-                
+            baseTableName="employees"
+            baseColumnNames="company_id"
+            constraintName="fk_employee_company"
+            referencedTableName="companies"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+            
         <addForeignKeyConstraint
-                baseTableName="employees"
-                baseColumnNames="grade_id"
-                constraintName="fk_employee_grade"
-                referencedTableName="grades"
-                referencedColumnNames="id"/>
+            baseTableName="employees"
+            baseColumnNames="account_id"
+            constraintName="fk_employee_account"
+            referencedTableName="accounts"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+            
+        <addForeignKeyConstraint
+            baseTableName="employees"
+            baseColumnNames="grade_id"
+            constraintName="fk_employee_grade"
+            referencedTableName="grades"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            baseTableName="employees"
+            baseColumnNames="created_by"
+            constraintName="fk_employee_created_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+        
+        <addForeignKeyConstraint
+            baseTableName="employees"
+            baseColumnNames="updated_by"
+            constraintName="fk_employee_updated_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+            
+        <rollback>
+            <dropForeignKeyConstraint baseTableName="employees" constraintName="fk_employee_user"/>
+            <dropForeignKeyConstraint baseTableName="employees" constraintName="fk_employee_company"/>
+            <dropForeignKeyConstraint baseTableName="employees" constraintName="fk_employee_account"/>
+            <dropForeignKeyConstraint baseTableName="employees" constraintName="fk_employee_grade"/>
+            <dropForeignKeyConstraint baseTableName="employees" constraintName="fk_employee_created_by"/>
+            <dropForeignKeyConstraint baseTableName="employees" constraintName="fk_employee_updated_by"/>
+            <dropTable tableName="employees"/>
+        </rollback>
     </changeSet>
 
-    <!-- Create Payroll Batches Table -->
-    <changeSet id="002-002" author="payroll-dev">
-        <createTable tableName="payroll_batches">
+    <changeSet id="010-create-payroll-batches-table" author="payroll-service">
+        <comment>Create payroll_batches table for managing salary processing batches</comment>
+        
+        <createTable tableName="payroll_batches"> 
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="name" type="VARCHAR(100)">
                 <constraints nullable="false"/>
             </column>
+            <column name="description" type="TEXT"/>
             <column name="payroll_month" type="DATE">
                 <constraints nullable="false"/>
             </column>
-            <column name="payroll_status" type="VARCHAR(20)">
+            <column name="payroll_status" type="VARCHAR(20)" defaultValue="PENDING">
                 <constraints nullable="false"/>
             </column>
-            <column name="total_amount" type="DECIMAL(19,4)"/>
-            <column name="processed_at" type="TIMESTAMP"/>
-            <column name="failure_reason" type="TEXT"/>
-            <!-- Audit Fields -->
+            <column name="funding_account_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="company_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_amount" type="DECIMAL(15,2)" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="executed_amount" type="DECIMAL(15,2)" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="executed_at" type="TIMESTAMP"/>
+            
             <column name="version" type="BIGINT" defaultValue="0">
                 <constraints nullable="false"/>
             </column>
-            <column name="status" type="VARCHAR(20)">
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
                 <constraints nullable="false"/>
             </column>
-            <column name="created_at" type="TIMESTAMP">
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="UUID"/>
-            <column name="updated_at" type="TIMESTAMP"/>
             <column name="updated_by" type="UUID"/>
         </createTable>
+        
+        <addForeignKeyConstraint
+            baseTableName="payroll_batches"
+            baseColumnNames="funding_account_id"
+            constraintName="fk_payroll_batch_funding_account"
+            referencedTableName="accounts"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+            
+        <addForeignKeyConstraint
+            baseTableName="payroll_batches"
+            baseColumnNames="company_id"
+            constraintName="fk_payroll_batch_company"
+            referencedTableName="companies"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            baseTableName="payroll_batches"
+            baseColumnNames="created_by"
+            constraintName="fk_payroll_batch_created_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+        
+        <addForeignKeyConstraint
+            baseTableName="payroll_batches"
+            baseColumnNames="updated_by"
+            constraintName="fk_payroll_batch_updated_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+            
+        <rollback>
+            <dropForeignKeyConstraint baseTableName="payroll_batches" constraintName="fk_payroll_batch_funding_account"/>
+            <dropForeignKeyConstraint baseTableName="payroll_batches" constraintName="fk_payroll_batch_company"/>
+            <dropForeignKeyConstraint baseTableName="payroll_batches" constraintName="fk_payroll_batch_created_by"/>
+            <dropForeignKeyConstraint baseTableName="payroll_batches" constraintName="fk_payroll_batch_updated_by"/>
+            <dropTable tableName="payroll_batches"/>
+        </rollback>
     </changeSet>
 
-    <!-- Create Payroll Items Table -->
-    <changeSet id="002-003" author="payroll-dev">
-        <createTable tableName="payroll_items">
+    <changeSet id="011-create-payroll-items-table" author="payroll-service">
+        <comment>Create payroll_items table for individual employee salary items in batches</comment>
+        
+        <createTable tableName="payroll_items"> 
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
@@ -112,105 +206,271 @@
             <column name="employee_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
-            <column name="net_amount" type="DECIMAL(19,4)">
+            <column name="amount" type="DECIMAL(19,4)" defaultValue="0.0000">
                 <constraints nullable="false"/>
             </column>
-            <column name="gross_salary" type="DECIMAL(19,4)"/>
-            <column name="basics" type="DECIMAL(19,4)"/>
-            <column name="hra" type="DECIMAL(19,4)"/>
-            <column name="medical_allowance" type="DECIMAL(19,4)"/>
+            <column name="gross" type="DECIMAL(19,4)" defaultValue="0.0000"/>
+            <column name="basics" type="DECIMAL(19,4)" defaultValue="0.0000"/>
+            <column name="hra" type="DECIMAL(19,4)" defaultValue="0.0000"/>
+            <column name="medical_allowance" type="DECIMAL(19,4)" defaultValue="0.0000"/>
             <column name="payroll_item_status" type="VARCHAR(20)" defaultValue="PENDING">
                 <constraints nullable="false"/>
             </column>
             <column name="failure_reason" type="TEXT"/>
-            <!-- Audit Fields -->
+            <column name="executed_at" type="TIMESTAMP"/>
+
             <column name="version" type="BIGINT" defaultValue="0">
                 <constraints nullable="false"/>
             </column>
-            <column name="status" type="VARCHAR(20)" defaultValue="PENDING">
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
                 <constraints nullable="false"/>
             </column>
-            <column name="created_at" type="TIMESTAMP">
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="UUID"/>
-            <column name="updated_at" type="TIMESTAMP"/>
             <column name="updated_by" type="UUID"/>
         </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="payroll_items"
+            baseColumnNames="batch_id"
+            constraintName="fk_payroll_item_batch"
+            referencedTableName="payroll_batches"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="payroll_items"
+            baseColumnNames="employee_id"
+            constraintName="fk_payroll_item_employee"
+            referencedTableName="employees"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            baseTableName="payroll_items"
+            baseColumnNames="created_by"
+            constraintName="fk_payroll_item_created_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
         
-        <!-- Add Foreign Keys -->
         <addForeignKeyConstraint
-                baseTableName="payroll_items"
-                baseColumnNames="batch_id"
-                constraintName="fk_payroll_item_batch"
-                referencedTableName="payroll_batches"
-                referencedColumnNames="id"/>
-                
-        <addForeignKeyConstraint
-                baseTableName="payroll_items"
-                baseColumnNames="employee_id"
-                constraintName="fk_payroll_item_employee"
-                referencedTableName="employees"
-                referencedColumnNames="id"/>
+            baseTableName="payroll_items"
+            baseColumnNames="updated_by"
+            constraintName="fk_payroll_item_updated_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+            
+        <rollback>
+            <dropForeignKeyConstraint baseTableName="payroll_items" constraintName="fk_payroll_item_batch"/>
+            <dropForeignKeyConstraint baseTableName="payroll_items" constraintName="fk_payroll_item_employee"/>
+            <dropForeignKeyConstraint baseTableName="payroll_items" constraintName="fk_payroll_item_created_by"/>
+            <dropForeignKeyConstraint baseTableName="payroll_items" constraintName="fk_payroll_item_updated_by"/>
+            <dropTable tableName="payroll_items"/>
+        </rollback>
     </changeSet>
 
-    <!-- Create Transaction Ledgers Table -->
-    <changeSet id="002-004" author="payroll-dev">
-        <createTable tableName="transaction_ledgers">
+    <changeSet id="012-create-token-info-table" author="payroll-service">
+        <comment>Create token_info table for JWT token lifecycle management</comment>
+        
+        <createTable tableName="token_info">
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
-            <column name="account_id" type="UUID">
+            <column name="user_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
-            <column name="batch_id" type="UUID">
+            <column name="refresh_token" type="VARCHAR(500)">
                 <constraints nullable="false"/>
             </column>
-            <column name="type" type="VARCHAR(20)">
+            <column name="access_jti" type="VARCHAR(36)">
                 <constraints nullable="false"/>
             </column>
-            <column name="category" type="VARCHAR(20)">
+            <column name="access_expires" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="amount" type="DECIMAL(19,4)">
+            <column name="refresh_expires" type="TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="reference_id" type="VARCHAR(100)">
-                <constraints unique="true"/>
+            <column name="is_revoked" type="BOOLEAN" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="device_info" type="VARCHAR(255)"/>
+            <column name="ip_address" type="VARCHAR(45)"/>
+
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+        
+        <addForeignKeyConstraint
+            baseTableName="token_info"
+            baseColumnNames="user_id"
+            constraintName="fk_token_info_user"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="token_info"
+            baseColumnNames="created_by"
+            constraintName="fk_token_info_created_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+        
+        <addForeignKeyConstraint
+            baseTableName="token_info"
+            baseColumnNames="updated_by"
+            constraintName="fk_token_info_updated_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+            
+        <rollback>
+            <dropForeignKeyConstraint baseTableName="token_info" constraintName="fk_token_info_user"/>
+            <dropForeignKeyConstraint baseTableName="token_info" constraintName="fk_token_info_created_by"/>
+            <dropForeignKeyConstraint baseTableName="token_info" constraintName="fk_token_info_updated_by"/>
+            <dropTable tableName="token_info"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="013-create-transactions-table" author="payroll-service">
+        <comment>Create transactions table for double-entry accounting</comment>
+        
+        <createTable tableName="transactions">
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="debit_acc_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="credit_acc_id" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="DECIMAL(15,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="trx_type" type="VARCHAR(50)" defaultValue="PAYROLL_DISBURSEMENT">
+                <constraints nullable="false"/>
             </column>
             <column name="transaction_status" type="VARCHAR(20)" defaultValue="PENDING">
                 <constraints nullable="false"/>
             </column>
+            <column name="requested_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="processed_at" type="TIMESTAMP"/>
+            <column name="source_item_id" type="UUID"/>
+            
+            <!-- Legacy fields for backward compatibility -->
+            <column name="account_id" type="UUID"/>
+            <column name="batch_id" type="UUID"/>
+            <column name="type" type="VARCHAR(50)"/>
+            <column name="category" type="VARCHAR(50)"/>
+            <column name="reference_id" type="VARCHAR(255)"/>
             <column name="description" type="TEXT"/>
-            <!-- Audit Fields -->
+            <column name="failure_reason" type="TEXT"/>
+            
             <column name="version" type="BIGINT" defaultValue="0">
                 <constraints nullable="false"/>
             </column>
-            <column name="status" type="VARCHAR(20)" defaultValue="PENDING">
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
                 <constraints nullable="false"/>
             </column>
-            <column name="created_at" type="TIMESTAMP">
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
             <column name="created_by" type="UUID"/>
-            <column name="updated_at" type="TIMESTAMP"/>
             <column name="updated_by" type="UUID"/>
         </createTable>
         
-        <!-- Add Foreign Keys -->
         <addForeignKeyConstraint
-                baseTableName="transaction_ledgers"
-                baseColumnNames="account_id"
-                constraintName="fk_transaction_account"
-                referencedTableName="accounts"
-                referencedColumnNames="id"/>
-                
-        <addForeignKeyConstraint
-                baseTableName="transaction_ledgers"
-                baseColumnNames="batch_id"
-                constraintName="fk_transaction_batch"
-                referencedTableName="payroll_batches"
-                referencedColumnNames="id"/>
-    </changeSet>
+            baseTableName="transactions"
+            baseColumnNames="debit_acc_id"
+            constraintName="fk_transaction_debit_account"
+            referencedTableName="accounts"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
 
+        <addForeignKeyConstraint
+            baseTableName="transactions"
+            baseColumnNames="credit_acc_id"
+            constraintName="fk_transaction_credit_account"
+            referencedTableName="accounts"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            baseTableName="transactions"
+            baseColumnNames="source_item_id"
+            constraintName="fk_transaction_source_item"
+            referencedTableName="payroll_items"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <!-- Legacy FK constraints -->
+        <addForeignKeyConstraint
+            baseTableName="transactions"
+            baseColumnNames="account_id"
+            constraintName="fk_transaction_account"
+            referencedTableName="accounts"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <addForeignKeyConstraint
+            baseTableName="transactions"
+            baseColumnNames="batch_id"
+            constraintName="fk_transaction_batch"
+            referencedTableName="payroll_batches"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <addForeignKeyConstraint
+            baseTableName="transactions"
+            baseColumnNames="created_by"
+            constraintName="fk_transaction_created_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+        
+        <addForeignKeyConstraint
+            baseTableName="transactions"
+            baseColumnNames="updated_by"
+            constraintName="fk_transaction_updated_by"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+            
+        <rollback>
+            <dropForeignKeyConstraint baseTableName="transactions" constraintName="fk_transaction_debit_account"/>
+            <dropForeignKeyConstraint baseTableName="transactions" constraintName="fk_transaction_credit_account"/>
+            <dropForeignKeyConstraint baseTableName="transactions" constraintName="fk_transaction_source_item"/>
+            <dropForeignKeyConstraint baseTableName="transactions" constraintName="fk_transaction_account"/>
+            <dropForeignKeyConstraint baseTableName="transactions" constraintName="fk_transaction_batch"/>
+            <dropForeignKeyConstraint baseTableName="transactions" constraintName="fk_transaction_created_by"/>
+            <dropForeignKeyConstraint baseTableName="transactions" constraintName="fk_transaction_updated_by"/>
+            <dropTable tableName="transactions"/>
+        </rollback>
+    </changeSet>
 </databaseChangeLog>

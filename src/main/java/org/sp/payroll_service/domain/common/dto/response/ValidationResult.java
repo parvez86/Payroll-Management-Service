@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * Validation result record.
- * @param isValid validation status
+ * @param isValid validation transactionStatus
  * @param field validated field name
  * @param value validated value
  * @param errors validation errors

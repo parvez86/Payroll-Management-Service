@@ -1,6 +1,9 @@
 package org.sp.payroll_service.domain.common.dto.response;
 
+import lombok.Builder;
+
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Audit information record.
@@ -10,6 +13,7 @@ import java.time.Instant;
  * @param lastModifiedAt last modification timestamp
  * @param version entity version
  */
+@Builder
 public record AuditInfo(
     String createdBy,
     Instant createdAt,

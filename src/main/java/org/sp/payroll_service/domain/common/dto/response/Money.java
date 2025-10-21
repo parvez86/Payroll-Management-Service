@@ -29,12 +29,58 @@ public record Money(
     }
     
     /**
+     * Creates money amount with default currency (INR) and scale.
+     * @param amount amount
+     * @return money amount in INR
+     */
+    public static Money of(BigDecimal amount) {
+        return new Money(amount, "INR", 2);
+    }
+    
+    /**
+     * Creates money amount with specified currency and default scale.
+     * @param amount amount
+     * @param currency currency code
+     * @return money amount
+     */
+    public static Money of(BigDecimal amount, String currency) {
+        return new Money(amount, currency, 2);
+    }
+    
+    /**
+     * Creates money amount from double with specified currency.
+     * @param amount amount as double
+     * @param currency currency code
+     * @return money amount
+     */
+    public static Money of(double amount, String currency) {
+        return new Money(BigDecimal.valueOf(amount), currency, 2);
+    }
+    
+    /**
      * Creates INR money amount.
      * @param amount amount in INR
      * @return money in INR
      */
     public static Money inr(BigDecimal amount) {
         return new Money(amount, "INR", 2);
+    }
+    
+    /**
+     * Creates zero money with specified currency.
+     * @param currency currency code
+     * @return zero money
+     */
+    public static Money zero(String currency) {
+        return new Money(BigDecimal.ZERO, currency, 2);
+    }
+    
+    /**
+     * Creates zero money in INR.
+     * @return zero money in INR
+     */
+    public static Money zero() {
+        return new Money(BigDecimal.ZERO, "INR", 2);
     }
     
     /**

@@ -1,5 +1,9 @@
 spring:
-  # Docker Database Configuration
+  # 1. Application Metadata
+  application:
+    name: Payroll Management Service
+
+  # 2. Database Configuration (Uses service link 'postgres')
   datasource:
     url: jdbc:postgresql://postgres:5432/payroll_db
     username: payroll_user
@@ -13,41 +17,97 @@ spring:
       idle-timeout: 300000
       max-lifetime: 900000
   
-  # Redis Configuration for Session Management
-  data:
-    redis:
-      host: redis
-      port: 6379
-      timeout: 2000ms
-      lettuce:
-        pool:
-          max-active: 8
-          max-idle: 8
-          min-idle: 0
+  # 3. Redis Configuration - COMMENTED OUT
+  # data:
+  #   redis:
+  #     host: redis
+  #     port: 6379
+  #     timeout: 2000ms
+  #     lettuce:
+  #       pool:
+  #         max-active: 8
+  #         max-idle: 8
+  #         min-idle: 0
   
-  # JPA Configuration for Docker
+  # 4. JPA Configuration 
   jpa:
     hibernate:
       ddl-auto: validate
     properties:
       hibernate:
-        show_sql: false
-        format_sql: false
-        generate_statistics: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect # MISSING
+        format_sql: false # Docker preference
+        show_sql: false # Docker preference
+        jdbc:
+          batch_size: 20 # MISSING
+        order-inserts: true # MISSING
+        order-updates: true # MISSING
+        generate-statistics: true # Docker preference (overrides local 'false')
     open-in-view: false
 
-# Docker JWT Configuration
+  # 5. Liquibase Configuration
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    default-schema: public
+    drop-first: false  # false -> preserve data
+
+
+  # 6. Security Configuratio
+  security:
+    user:
+      name: admin
+      password: admin123
+      roles: ADMIN
+  
+  # 7. JSON Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: Asia/Dhaka
+
+# Application Configuration
 app:
   jwt:
+    header-prefix: Bearer
     secret: ${JWT_SECRET:DockerSecretKeyForPayrollSystemProduction2024}
     expiration: 86400000
+    issuer: PayrollManagementSystem
 
-# Docker Logging
+  payroll:
+    grade6-base-salary: 50000.00
+    hra-percentage: 0.20
+    medical-percentage: 0.15
+    grade-increment: 5000.00
+
+# Server Configuration
+server:
+  port: 20001
+  servlet:
+    context-path: /pms/v1/api
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# Logging Configuration (Docker pattern is kept)
 logging:
   level:
     org.sp.payroll_service: INFO
     org.springframework.security: WARN
     org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN # MISSING
     liquibase: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Management and Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,liquibase
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    db:
+      enabled: true

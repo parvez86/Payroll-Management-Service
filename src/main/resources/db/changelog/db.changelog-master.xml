@@ -6,9 +6,9 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
 
     <!-- Include all changelog files -->
-    <include file="/db/changelog/change/001-create-base-tables.xml"/>
-    <include file="/db/changelog/change/002-create-payroll-tables.xml"/>
-    <include file="/db/changelog/change/003-create-indexes.xml"/>
-    <include file="/db/changelog/change/004-insert-seed-data.xml"/>
+    <include file="db/changelog/change/001-create-base-tables.xml"/>
+    <include file="db/changelog/change/002-create-payroll-tables.xml"/>
+    <include file="db/changelog/change/003-create-indexes.xml"/>
+    <include file="db/changelog/change/004-insert-seed-data.xml"/>
 
 </databaseChangeLog>

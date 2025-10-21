@@ -24,23 +24,23 @@ public interface BaseRepository<T, ID extends Serializable>
         extends JpaRepository<T, ID>, JpaSpecificationExecutor<T> {
 
     /**
-     * Find an entity by ID (excluding DELETED status).
+     * Find an entity by ID (excluding DELETED transactionStatus).
      */
     @Query("SELECT e FROM #{#entityName} e WHERE e.id = :id AND e.status <> 'DELETED'")
     Optional<T> findById(@Param("id") ID id);
 
     /**
-     * Find an entity by ID, including DELETED status.
+     * Find an entity by ID, including DELETED transactionStatus.
      */
     @Query("SELECT e FROM #{#entityName} e WHERE e.id = :id")
     Optional<T> findByIdIncludingDeleted(@Param("id") ID id);
 
 
     /**
-     * Find an entity by ID and specific status.
+     * Find an entity by ID and specific transactionStatus.
      */
     @Query("SELECT e FROM #{#entityName} e WHERE e.id = :id AND e.status = :status")
-    Optional<T> findByIdAndStatus(@Param("id") ID id, @Param("status") EntityStatus status);
+    Optional<T> findByIdAndStatus(@Param("id") ID id, @Param("transactionStatus") EntityStatus status);
 
     /**
      * Find all active entities.
@@ -74,7 +74,7 @@ public interface BaseRepository<T, ID extends Serializable>
 
     /**
      * Soft delete an entity by ID.
-     * Updates the status field to DELETED.
+     * Updates the transactionStatus field to DELETED.
      */
     @Query("UPDATE #{#entityName} e SET e.status = 'DELETED', e.updatedAt = CURRENT_TIMESTAMP WHERE e.id = :id AND e.status <> 'DELETED'")
     @Modifying
@@ -83,7 +83,7 @@ public interface BaseRepository<T, ID extends Serializable>
 
     /**
      * Bulk soft delete entities by IDs.
-     * Updates the status field to DELETED.
+     * Updates the transactionStatus field to DELETED.
      */
     @Query("UPDATE #{#entityName} e SET e.status = 'DELETED', e.updatedAt = CURRENT_TIMESTAMP WHERE e.id IN :ids AND e.status <> 'DELETED'")
     @Modifying

@@ -1,7 +1,7 @@
 package org.sp.payroll_service.repository;
 
 import org.sp.payroll_service.domain.common.enums.PayrollStatus;
-import org.sp.payroll_service.domain.payroll.PayrollBatch;
+import org.sp.payroll_service.domain.payroll.entity.PayrollBatch;
 import org.sp.payroll_service.domain.common.repository.BaseRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,7 +13,7 @@ import java.util.UUID;
 
 /**
  * Payroll Batch data access repository.
- * Manages lookups based on batch date/period and status.
+ * Manages lookups based on batch date/period and transactionStatus.
  */
 @Repository
 public interface PayrollBatchRepository extends BaseRepository<PayrollBatch, UUID> {
@@ -27,8 +27,8 @@ public interface PayrollBatchRepository extends BaseRepository<PayrollBatch, UUI
     List<PayrollBatch> findByPayrollMonthBetween(Instant startDate, Instant endDate);
 
     /**
-     * Finds all active Payroll Batches with a specific status, with pagination.
-     * @param status The status of the batch (e.g., PENDING, COMPLETED)
+     * Finds all active Payroll Batches with a specific transactionStatus, with pagination.
+     * @param status The transactionStatus of the batch (e.g., PENDING, COMPLETED)
      * @param pageable Pagination information
      * @return Page of PayrollBatch entities
      */

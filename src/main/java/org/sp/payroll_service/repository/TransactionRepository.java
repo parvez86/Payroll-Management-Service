@@ -3,7 +3,7 @@ package org.sp.payroll_service.repository;
 import org.sp.payroll_service.domain.common.enums.TransactionCategory;
 import org.sp.payroll_service.domain.common.enums.TransactionStatus;
 import org.sp.payroll_service.domain.common.repository.BaseRepository;
-import org.sp.payroll_service.domain.payroll.Transaction;
+import org.sp.payroll_service.domain.payroll.entity.Transaction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -54,10 +54,26 @@ public interface TransactionRepository extends BaseRepository<Transaction, UUID>
     
     /**
      * Finds failed transactions for compensation.
-     * @param status transaction status
+     * @param status transaction transactionStatus
      * @param category transaction category
      * @return list of failed transactions
      */
     @Query("SELECT t FROM Transaction t WHERE t.transactionStatus = :status AND t.category = :category AND t.createdAt >= :since")
     List<Transaction> findFailedTransactions(TransactionStatus status, TransactionCategory category, Instant since);
+    
+    /**
+     * Find transactions involving a specific account (either debit or credit).
+     * @param accountId account identifier
+     * @param pageable pagination parameters
+     * @return paginated transactions
+     */
+    @Query("SELECT t FROM Transaction t WHERE t.debitAccount.id = :accountId OR t.creditAccount.id = :accountId ORDER BY t.createdAt DESC")
+    Page<Transaction> findByAccountId(UUID accountId, Pageable pageable);
+    
+    /**
+     * Find transactions for a specific payroll batch.
+     * @param batchId payroll batch identifier
+     * @return list of transactions
+     */
+    List<Transaction> findByPayrollBatchId(UUID batchId);
 }

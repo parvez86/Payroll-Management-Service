@@ -1,27 +1,23 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <databaseChangeLog
-        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
-
-    <!-- Performance and Security Indexes -->
-    <changeSet id="003-001" author="payroll-dev">
-        
-        <!-- Employee Indexes -->
-        <createIndex tableName="employees" indexName="idx_employee_biz_id">
-            <column name="biz_id"/>
-        </createIndex>
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd"> <changeSet id="014-create-performance-indexes" author="payroll-service">
+        <comment>Create performance indexes for optimal query execution on core tables.</comment>
         
         <createIndex tableName="employees" indexName="idx_employee_grade">
             <column name="grade_id"/>
         </createIndex>
         
         <createIndex tableName="employees" indexName="idx_employee_code">
-            <column name="employee_code"/>
+            <column name="code"/>
+        </createIndex>
+        
+        <createIndex tableName="employees" indexName="idx_employee_company">
+            <column name="company_id"/>
         </createIndex>
 
-        <!-- Account Indexes -->
         <createIndex tableName="accounts" indexName="idx_account_owner">
             <column name="owner_type"/>
             <column name="owner_id"/>
@@ -30,17 +26,23 @@
         <createIndex tableName="accounts" indexName="idx_account_number">
             <column name="account_number"/>
         </createIndex>
+        
+        <createIndex tableName="accounts" indexName="idx_account_branch">
+            <column name="branch_id"/>
+        </createIndex>
 
-        <!-- Payroll Batch Indexes -->
         <createIndex tableName="payroll_batches" indexName="idx_payroll_batch_month">
             <column name="payroll_month"/>
         </createIndex>
         
         <createIndex tableName="payroll_batches" indexName="idx_payroll_batch_status">
-            <column name="status"/>
+            <column name="payroll_status"/>
+        </createIndex>
+        
+        <createIndex tableName="payroll_batches" indexName="idx_payroll_batch_company">
+            <column name="company_id"/>
         </createIndex>
 
-        <!-- Payroll Item Indexes -->
         <createIndex tableName="payroll_items" indexName="idx_payroll_item_batch">
             <column name="batch_id"/>
         </createIndex>
@@ -50,54 +52,99 @@
         </createIndex>
         
         <createIndex tableName="payroll_items" indexName="idx_payroll_item_status">
-            <column name="status"/>
+            <column name="payroll_item_status"/>
         </createIndex>
 
-        <!-- Transaction Ledger Indexes -->
-        <createIndex tableName="transaction_ledgers" indexName="idx_transaction_account">
+        <createIndex tableName="transactions" indexName="idx_transaction_account"> 
             <column name="account_id"/>
         </createIndex>
         
-        <createIndex tableName="transaction_ledgers" indexName="idx_transaction_batch">
+        <createIndex tableName="transactions" indexName="idx_transaction_batch">
             <column name="batch_id"/>
         </createIndex>
         
-        <createIndex tableName="transaction_ledgers" indexName="idx_transaction_status">
-            <column name="status"/>
+        <createIndex tableName="transactions" indexName="idx_transaction_status">
+            <column name="transaction_status"/>
         </createIndex>
         
-        <createIndex tableName="transaction_ledgers" indexName="idx_transaction_type_category">
-            <column name="type"/>
-            <column name="category"/>
-        </createIndex>
-
-        <!-- User Indexes -->
-        <createIndex tableName="users" indexName="idx_user_username">
-            <column name="username"/>
+        <createIndex tableName="transactions" indexName="idx_transaction_type_category">
+            <column name="trx_type"/> <column name="category"/>
         </createIndex>
         
-        <createIndex tableName="users" indexName="idx_user_email">
-            <column name="email"/>
+        <createIndex tableName="transactions" indexName="idx_transaction_double_entry">
+            <column name="debit_acc_id"/>
+            <column name="credit_acc_id"/>
+        </createIndex>
+        
+        <createIndex tableName="transactions" indexName="idx_transaction_source_item">
+            <column name="source_item_id"/>
         </createIndex>
 
-        <!-- Grade Indexes -->
+        <createIndex tableName="users" indexName="idx_user_role">
+            <column name="role"/>
+        </createIndex>
+
         <createIndex tableName="grades" indexName="idx_grade_rank">
             <column name="rank"/>
         </createIndex>
+        
+        <createIndex tableName="grades" indexName="idx_grade_parent">
+            <column name="parent_id"/> 
+        </createIndex>
 
-        <!-- Audit Trail Indexes -->
+        <createIndex tableName="companies" indexName="idx_company_salary_formula">
+            <column name="salary_formula_id"/>
+        </createIndex>
+
+        <createIndex tableName="branch" indexName="idx_branch_bank">
+            <column name="bank_id"/>
+        </createIndex>
+
         <createIndex tableName="users" indexName="idx_user_created_at">
             <column name="created_at"/>
         </createIndex>
         
-        <createIndex tableName="transaction_ledgers" indexName="idx_transaction_created_at">
+        <createIndex tableName="transactions" indexName="idx_transaction_created_at">
             <column name="created_at"/>
         </createIndex>
         
         <createIndex tableName="payroll_batches" indexName="idx_payroll_batch_created_at">
             <column name="created_at"/>
         </createIndex>
+        
+        <createIndex tableName="employees" indexName="idx_employee_created_at">
+            <column name="created_at"/>
+        </createIndex>
 
+        <rollback>
+            <dropIndex tableName="employees" indexName="idx_employee_created_at"/>
+            <dropIndex tableName="payroll_batches" indexName="idx_payroll_batch_created_at"/>
+            <dropIndex tableName="transactions" indexName="idx_transaction_created_at"/>
+            <dropIndex tableName="users" indexName="idx_user_created_at"/>
+            <dropIndex tableName="branch" indexName="idx_branch_bank"/>
+            <dropIndex tableName="companies" indexName="idx_company_salary_formula"/>
+            <dropIndex tableName="grades" indexName="idx_grade_parent"/>
+            <dropIndex tableName="grades" indexName="idx_grade_rank"/>
+            <dropIndex tableName="users" indexName="idx_user_role"/>
+            <dropIndex tableName="transactions" indexName="idx_transaction_source_item"/>
+            <dropIndex tableName="transactions" indexName="idx_transaction_double_entry"/>
+            <dropIndex tableName="transactions" indexName="idx_transaction_type_category"/>
+            <dropIndex tableName="transactions" indexName="idx_transaction_status"/>
+            <dropIndex tableName="transactions" indexName="idx_transaction_batch"/>
+            <dropIndex tableName="transactions" indexName="idx_transaction_account"/>
+            <dropIndex tableName="payroll_items" indexName="idx_payroll_item_status"/>
+            <dropIndex tableName="payroll_items" indexName="idx_payroll_item_employee"/>
+            <dropIndex tableName="payroll_items" indexName="idx_payroll_item_batch"/>
+            <dropIndex tableName="payroll_batches" indexName="idx_payroll_batch_company"/>
+            <dropIndex tableName="payroll_batches" indexName="idx_payroll_batch_status"/>
+            <dropIndex tableName="payroll_batches" indexName="idx_payroll_batch_month"/>
+            <dropIndex tableName="accounts" indexName="idx_account_branch"/>
+            <dropIndex tableName="accounts" indexName="idx_account_number"/>
+            <dropIndex tableName="accounts" indexName="idx_account_owner"/>
+            <dropIndex tableName="employees" indexName="idx_employee_company"/>
+            <dropIndex tableName="employees" indexName="idx_employee_code"/>
+            <dropIndex tableName="employees" indexName="idx_employee_grade"/>
+        </rollback>
     </changeSet>
 
 </databaseChangeLog>

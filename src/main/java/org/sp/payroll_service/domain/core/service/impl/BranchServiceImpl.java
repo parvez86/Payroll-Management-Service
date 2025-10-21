@@ -1,0 +1,153 @@
+package org.sp.payroll_service.domain.core.service.impl;
+
+import lombok.extern.slf4j.Slf4j;
+import org.sp.payroll_service.api.core.dto.BranchCreateRequest;
+import org.sp.payroll_service.api.core.dto.BranchFilter;
+import org.sp.payroll_service.api.core.dto.BranchResponse;
+import org.sp.payroll_service.api.core.dto.BranchUpdateRequest;
+import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
+import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
+import org.sp.payroll_service.domain.common.service.AbstractCrudService;
+import org.sp.payroll_service.domain.core.entity.Bank;
+import org.sp.payroll_service.domain.core.entity.Branch;
+import org.sp.payroll_service.domain.core.service.BranchService;
+import org.sp.payroll_service.repository.BankRepository;
+import org.sp.payroll_service.repository.BranchRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import jakarta.persistence.criteria.Predicate;
+import java.util.ArrayList;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+
+/**
+ * Concrete service implementation for managing {@code Branch} entities.
+ */
+@Service
+@Slf4j
+public class BranchServiceImpl extends AbstractCrudService<
+        Branch,
+        UUID,
+        BranchResponse,
+        BranchCreateRequest,
+        BranchUpdateRequest,
+        BranchFilter>
+        implements BranchService {
+
+    private final BranchRepository branchRepository;
+    private final BankRepository bankRepository; // Dependency to validate parent Bank
+
+    public BranchServiceImpl(BranchRepository branchRepository, BankRepository bankRepository) {
+        super(branchRepository, "Branch");
+        this.branchRepository = branchRepository;
+        this.bankRepository = bankRepository;
+    }
+
+    // --- Overrides for Creation and Update with Business Logic ---
+
+    @Override
+    @Transactional
+    public CompletableFuture<BranchResponse> create(BranchCreateRequest request) {
+        if (branchRepository.existsByBranchNameAndBank_Id(request.branchName(), request.bankId())) {
+            throw DuplicateEntryException.forEntity("Branch", "branchName", request.branchName());
+        }
+        return super.create(request);
+    }
+
+    @Override
+    @Transactional
+    public CompletableFuture<BranchResponse> update(UUID id, BranchUpdateRequest request) {
+        checkUniquenessOnUpdate(id, request.branchName(), request.bankId());
+
+        return super.update(id, request);
+    }
+
+
+    @Override
+    @Async("virtualThreadExecutor")
+    @Transactional(readOnly = true)
+    public CompletableFuture<Page<BranchResponse>> search(BranchFilter filter, Pageable pageable) {
+        Specification<Branch> spec = (root, query, cb) -> {
+            var predicates = new ArrayList<Predicate>();
+
+            if (StringUtils.hasText(filter.keyword())) {
+                String pattern = "%" + filter.keyword().toLowerCase() + "%";
+                Predicate keywordMatch = cb.or(
+                        cb.like(cb.lower(root.get("branchName")), pattern),
+                        cb.like(cb.lower(root.get("address")), pattern)
+                );
+                predicates.add(keywordMatch);
+            }
+
+            if (filter.bankId() != null) {
+                predicates.add(cb.equal(root.get("bank").get("id"), filter.bankId()));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Branch> entityPage = specExecutor.findAll(spec, pageable);
+
+        return CompletableFuture.completedFuture(entityPage.map(this::mapToResponse));
+    }
+
+    // --- Abstract Mapping Implementations (No changes needed) ---
+
+    @Override
+    protected Branch mapToEntity(BranchCreateRequest creationRequest) {
+        Bank bank = getBankOrThrow(creationRequest.bankId());
+
+        return Branch.builder()
+                .bank(bank)
+                .branchName(creationRequest.branchName())
+                .address(creationRequest.address())
+                .build();
+    }
+
+    @Override
+    protected Branch mapToEntity(BranchUpdateRequest updateRequest, Branch entity) {
+        if (!entity.getBank().getId().equals(updateRequest.bankId())) {
+            Bank bank = getBankOrThrow(updateRequest.bankId());
+            entity.setBank(bank);
+        }
+
+        entity.setBranchName(updateRequest.branchName());
+        entity.setAddress(updateRequest.address());
+        return entity;
+    }
+
+    @Override
+    protected BranchResponse mapToResponse(Branch entity) {
+        String bankName = (entity.getBank() != null) ? entity.getBank().getName() : null;
+
+        return new BranchResponse(
+                entity.getId(),
+                entity.getBranchName(),
+                entity.getAddress(),
+                entity.getBank().getId(),
+                bankName,
+                entity.getCreatedAt(),
+                entity.getCreatedBy()
+        );
+    }
+
+    // --- Private Helpers ---
+
+    private Bank getBankOrThrow(UUID bankId) {
+        return bankRepository.findById(bankId)
+                // ⚠️ CORRECTION: Changed ResourceNotFoundException.forEntity to use the type and ID.
+                .orElseThrow(() -> ResourceNotFoundException.forEntity("Bank", bankId));
+    }
+
+    private void checkUniquenessOnUpdate(UUID currentId, String newBranchName, UUID bankId) {
+        if (branchRepository.existsByBranchNameAndBankIdAndIdNot(newBranchName, bankId, currentId)) {
+            throw DuplicateEntryException.forEntity("Branch", "branchName", newBranchName);
+        }
+    }
+}

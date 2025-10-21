@@ -1,6 +1,6 @@
 package org.sp.payroll_service.repository;
 
-import org.sp.payroll_service.domain.wallet.Account;
+import org.sp.payroll_service.domain.wallet.entity.Account;
 import org.sp.payroll_service.domain.common.repository.BaseRepository;
 import org.sp.payroll_service.domain.common.enums.OwnerType;
 import org.springframework.stereotype.Repository;
@@ -22,6 +22,13 @@ public interface AccountRepository extends BaseRepository<Account, UUID> {
      * @return Optional Account entity
      */
     Optional<Account> findByAccountNumber(String accountNumber);
+
+    /**
+     * Finds an active Account by its unique account number.
+     * @param ownerId The account owner
+     * @return Optional Account entity
+     */
+    Optional<Account> findByOwnerIdAndOwnerType(UUID ownerId, OwnerType ownerType);
     
     /**
      * Finds all active Accounts belonging to a specific owner ID and type.
@@ -36,4 +43,10 @@ public interface AccountRepository extends BaseRepository<Account, UUID> {
      * Checks if an active Account exists with the given account number.
      */
     boolean existsByAccountNumber(String accountNumber);
+
+    /**
+     * Checks if an active Account exists with the given account number, excluding current id
+     */
+
+    boolean existsByAccountNumberAndIdNot(String accountNumber, UUID currentId);
 }

@@ -1,6 +1,6 @@
 package org.sp.payroll_service.repository;
 
-import org.sp.payroll_service.domain.core.Grade;
+import org.sp.payroll_service.domain.core.entity.Grade;
 import org.sp.payroll_service.domain.common.repository.BaseRepository;
 import org.springframework.stereotype.Repository;
 
@@ -27,4 +27,12 @@ public interface GradeRepository extends BaseRepository<Grade, UUID> {
      * @return true if a grade with that name exists
      */
     boolean existsByName(String name);
+
+    /**
+     * Checks for a Grade with the given name, excluding the current ID (for update validation).
+     * @param name The name of the grade
+     * @param currentId The current id
+     * @return true if a grade with that name exists, excluding the current id
+     */
+    boolean existsByNameAndIdNot(String name, UUID currentId);
 }
