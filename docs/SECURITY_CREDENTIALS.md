@@ -8,9 +8,9 @@
 ## System Access Information
 
 ### Application URLs
-- **Local Development**: `http://localhost:8080/pms/v1/api`
-- **Docker Environment**: `http://localhost:20001/pms/v1/api`
-- **Swagger UI**: `http://localhost:20001/pms/v1/api/swagger-ui/index.html`
+- **Local Development**: `http://localhost:20001/pms/api/v1`
+- **Docker Environment**: `http://localhost:20001/pms/api/v1`
+- **Swagger UI**: `http://localhost:20001/pms/swagger-ui/index.html`
 
 ---
 
@@ -43,26 +43,26 @@ All employee accounts use the same password for development convenience:
 ### Grade 3 - Senior Level (2 Employees)
 | Username | Email | Role | Employee ID | Name |
 |----------|-------|------|-------------|------|
-| `senior001` | senior001@techcorp.com | EMPLOYEE | 3001 | Mohammad Islam |
+| `senior001` | senior001@techcorp.com | EMPLOYEE | 3001 | Mohammad Ali |
 | `senior002` | senior002@techcorp.com | EMPLOYEE | 3002 | Rashida Begum |
 
 ### Grade 4 - Developer Level (2 Employees)
 | Username | Email | Role | Employee ID | Name |
 |----------|-------|------|-------------|------|
-| `dev001` | dev001@techcorp.com | EMPLOYEE | 4001 | Karim Ahmed |
-| `dev002` | dev002@techcorp.com | EMPLOYEE | 4002 | Nasir Uddin |
+| `dev001` | dev001@techcorp.com | EMPLOYEE | 4001 | Karim Uddin |
+| `dev002` | dev002@techcorp.com | EMPLOYEE | 4002 | Salma Akter |
 
 ### Grade 5 - Junior Level (2 Employees)
 | Username | Email | Role | Employee ID | Name |
 |----------|-------|------|-------------|------|
-| `junior001` | junior001@techcorp.com | EMPLOYEE | 5001 | Sadia Rahman |
-| `junior002` | junior002@techcorp.com | EMPLOYEE | 5002 | Habib Khan |
+| `junior001` | junior001@techcorp.com | EMPLOYEE | 5001 | Nasir Ahmed |
+| `junior002` | junior002@techcorp.com | EMPLOYEE | 5002 | Amina Khanom |
 
 ### Grade 6 - Intern Level (2 Employees)
 | Username | Email | Role | Employee ID | Name |
 |----------|-------|------|-------------|------|
-| `intern001` | intern001@techcorp.com | EMPLOYEE | 6001 | Taslima Akter |
-| `intern002` | intern002@techcorp.com | EMPLOYEE | 6002 | Rafiq Islam |
+| `intern001` | intern001@techcorp.com | EMPLOYEE | 6001 | Tariq Hassan |
+| `intern002` | intern002@techcorp.com | EMPLOYEE | 6002 | Ruma Parvin |
 
 ---
 
@@ -82,14 +82,14 @@ All employee accounts start with ৳0 balance and are SAVINGS type accounts.
 |----------|----------------|-------------|
 | Ahmed Rahman (Director) | DIR001 | Bangladesh Bank, Motijheel |
 | Fatima Khatun (Manager) | MGR001 | Sonali Bank, Dhanmondi |
-| Mohammad Islam (Senior) | SEN001 | Dutch Bangla Bank, Gulshan |
-| Rashida Begum (Senior) | SEN002 | Bangladesh Bank, Motijheel |
-| Karim Ahmed (Developer) | DEV001 | Sonali Bank, Dhanmondi |
-| Nasir Uddin (Developer) | DEV002 | Dutch Bangla Bank, Gulshan |
-| Sadia Rahman (Junior) | JUN001 | Bangladesh Bank, Motijheel |
-| Habib Khan (Junior) | JUN002 | Sonali Bank, Dhanmondi |
-| Taslima Akter (Intern) | INT001 | Dutch Bangla Bank, Gulshan |
-| Rafiq Islam (Intern) | INT002 | Bangladesh Bank, Motijheel |
+| Mohammad Ali (Senior) | SR001 | Dutch Bangla Bank, Gulshan |
+| Rashida Begum (Senior) | SR002 | Bangladesh Bank, Motijheel |
+| Karim Uddin (Developer) | DEV001 | Sonali Bank, Dhanmondi |
+| Salma Akter (Developer) | DEV002 | Dutch Bangla Bank, Gulshan |
+| Nasir Ahmed (Junior) | JR001 | Bangladesh Bank, Motijheel |
+| Amina Khanom (Junior) | JR002 | Sonali Bank, Dhanmondi |
+| Tariq Hassan (Intern) | INT001 | Dutch Bangla Bank, Gulshan |
+| Ruma Parvin (Intern) | INT002 | Bangladesh Bank, Motijheel |
 
 ---
 
@@ -170,14 +170,14 @@ $2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6
 
 ### Basic Login Test
 ```bash
-curl -X POST http://localhost:20001/pms/v1/api/auth/login \
+curl -X POST http://localhost:20001/pms/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}'
 ```
 
 ### Employee Login Test
 ```bash
-curl -X POST http://localhost:20001/pms/v1/api/auth/login \
+curl -X POST http://localhost:20001/pms/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"director001","password":"admin123"}'
 ```
