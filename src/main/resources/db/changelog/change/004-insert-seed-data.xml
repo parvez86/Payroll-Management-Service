@@ -156,7 +156,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="admin"/>
             <column name="email" value="admin@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6"/> <column name="role" value="ADMIN"/>
+            <column name="password_hash" value="$2a$12$DStt8gfwgRjiVKbE0s9yQuZJH3xyp0bjc6nW.HHyqolXQQMwHNXW."/> <column name="role" value="ADMIN"/>
         </insert>
         
         <rollback>
@@ -207,7 +207,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="director001"/>
             <column name="email" value="director@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6"/>
+            <column name="password_hash" value="$2a$12$vn5hv7GLTylKCy3FGJHYlebS3ex618q3QkvuJkL/ameW5MXmsbIO2"/>
             <column name="role" value="EMPLOYER"/>
         </insert>
         
@@ -215,7 +215,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="manager001"/>
             <column name="email" value="manager@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6"/>
+            <column name="password_hash" value="$2a$12$pRu2rXoQZvFU7yawAwRCweQSHCmca1V.hU.5UHmVHS4jyQ2lCiQPW"/>
             <column name="role" value="EMPLOYER"/>
         </insert>
         
@@ -223,7 +223,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="senior001"/>
             <column name="email" value="senior001@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6"/>
+            <column name="password_hash" value="$2a$12$lsCxB.08QCLZ9ExLIqk04eOwQvxdwqmI8ZJM.0OiRV4xxsaOjusIi"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
         
@@ -231,7 +231,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="senior002"/>
             <column name="email" value="senior002@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6"/>
+            <column name="password_hash" value="$2a$12$tGVfnO.zQfjvaFmagVXvV..DpbevDiVZjbnlpYq2F83Cr2/Vlw4Ke"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
         
@@ -239,7 +239,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="dev001"/>
             <column name="email" value="dev001@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6"/>
+            <column name="password_hash" value="$2a$12$OLR22Kjr6PHVtIrlS7wLAef.5omCgDvw6U7QLQ.wtFx5rr4zWp9gi"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
         
@@ -247,7 +247,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="dev002"/>
             <column name="email" value="dev002@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6"/>
+            <column name="password_hash" value="$2a$12$vf4722OFHIUFprTDqBKqge1NJny7iqHewYYCFCbSjw23rH0dQUnn6"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
         
@@ -255,7 +255,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="junior001"/>
             <column name="email" value="junior001@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6"/>
+            <column name="password_hash" value="$2a$12$TdembWUUDFtvnYADZA0qIOGWDKFS4P7eZzQTMyJAHl/53BGLalrPK"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
         
@@ -263,7 +263,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="junior002"/>
             <column name="email" value="junior002@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6"/>
+            <column name="password_hash" value="$2a$12$gkayhwIO1Ie6Ie9LJI0e7.SbzU67JuFrLbspkfwb5Of1bOYzT/gMu"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
         
@@ -271,7 +271,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="intern001"/>
             <column name="email" value="intern001@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6"/>
+            <column name="password_hash" value="$2a$12$J6fvKFCRPTCRsMvQ.xxMxuXGq2FNlReBeYnGN6AM2SJPrhGDRAvsq"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
         
@@ -279,7 +279,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="intern002"/>
             <column name="email" value="intern002@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6"/>
+            <column name="password_hash" value="$2a$12$xgLPtmtGh8wFmQdUHzxKzO1jjO2eJfXcIb71GYhQ0XYLGeTNmwRjq"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
         

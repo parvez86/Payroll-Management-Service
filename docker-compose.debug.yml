@@ -1,0 +1,43 @@
+# Debug Mode Docker Compose Override
+# Use: docker-compose -f docker-compose.yml -f docker-compose.debug.yml up
+
+version: '3.8'
+
+services:
+  payroll-service:
+    environment:
+      # Spring Boot Debug Configuration
+      SPRING_PROFILES_ACTIVE: docker,debug
+      LOGGING_LEVEL_ORG_SP_PAYROLL_SERVICE: DEBUG
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY: DEBUG
+      LOGGING_LEVEL_ORG_HIBERNATE_SQL: DEBUG
+      LOGGING_LEVEL_ORG_HIBERNATE_TYPE_DESCRIPTOR_SQL_BASICBINDER: TRACE
+      LOGGING_LEVEL_LIQUIBASE: DEBUG
+      LOGGING_LEVEL_ROOT: INFO
+      
+      # JVM Debug Options
+      JAVA_TOOL_OPTIONS: >-
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+        -Xms512m
+        -Xmx1024m
+        -XX:+HeapDumpOnOutOfMemoryError
+        -XX:HeapDumpPath=/tmp/heapdump.hprof
+        
+      # Application Debug Settings
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_GENERATE_STATISTICS: "true"
+      
+    ports:
+      - "20001:20001"  # Application port
+      - "5005:5005"    # Debug port for remote debugging
+      
+    volumes:
+      # Mount logs directory for easier access
+      - ./logs:/app/logs
+      # Mount heap dumps directory
+      - ./debug:/tmp
+      
+    labels:
+      - "debug=enabled"
+      - "remote-debug-port=5005"

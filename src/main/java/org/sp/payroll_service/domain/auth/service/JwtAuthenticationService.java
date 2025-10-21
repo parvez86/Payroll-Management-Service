@@ -58,29 +58,57 @@ public class JwtAuthenticationService implements AuthenticationService {
      */
     @Override
     public AuthResponse authenticate(LoginRequest request) {
+        log.info("======== SERVICE: Authentication Start ========");
+        log.info("SERVICE: Attempting authentication for username: {}", request.username());
+        
         // Find user
+        log.info("SERVICE: Searching for user in database...");
         User user = userRepository.findByUsername(request.username())
-                .orElseThrow(() -> new AuthenticationException(
-                        "Invalid username or password.",
-                        ErrorCodes.AUTH_INVALID_CREDENTIALS)
-                );
+                .orElseThrow(() -> {
+                    log.error("SERVICE: User not found in database: {}", request.username());
+                    return new AuthenticationException(
+                            "Invalid username or password.",
+                            ErrorCodes.AUTH_INVALID_CREDENTIALS);
+                });
+        
+        log.info("SERVICE: User found - ID: {}, Role: {}, Email: {}", 
+                user.getId(), user.getRole(), user.getEmail());
+        log.debug("SERVICE: User password hash length: {}", 
+                user.getPasswordHash() != null ? user.getPasswordHash().length() : 0);
 
         // Check password match
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        log.info("SERVICE: Verifying password...");
+        boolean passwordMatches = passwordEncoder.matches(request.password(), user.getPasswordHash());
+        log.info("SERVICE: Password verification result: {}", passwordMatches);
+        
+        if (!passwordMatches) {
+            log.error("SERVICE: Password verification failed for user: {}", request.username());
             throw new AuthenticationException(
                     "Invalid username or password.",
                     ErrorCodes.AUTH_INVALID_CREDENTIALS
             );
         }
 
+        log.info("SERVICE: Password verified successfully");
+        
         // Generate token pair
+        log.info("SERVICE: Generating JWT tokens...");
         String jti = UUID.randomUUID().toString();
+        log.debug("SERVICE: Generated JTI: {}", jti);
+        
         String accessToken = tokenProvider.generateAccessToken(user, jti);
+        log.info("SERVICE: Access token generated, length: {}", accessToken != null ? accessToken.length() : 0);
+        
         String refreshToken = tokenProvider.generateRefreshToken(user);
+        log.info("SERVICE: Refresh token generated, length: {}", refreshToken != null ? refreshToken.length() : 0);
 
         // Store token information. The tokenInfoService calculates expiry based on the tokens/provider config.
+        log.info("SERVICE: Storing token information in database...");
         TokenInfo tokenInfo = tokenInfoService.createTokenInfo(user, jti, refreshToken, null, null);
+        log.info("SERVICE: Token info stored - Access expires: {}, Refresh expires: {}", 
+                tokenInfo.getAccessExpires(), tokenInfo.getRefreshExpires());
 
+        log.info("======== SERVICE: Authentication Success ========");
         return new AuthResponse(
                 accessToken,
                 refreshToken,

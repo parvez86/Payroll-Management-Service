@@ -98,9 +98,10 @@ management:
     web:
       exposure:
         include: health,info,metrics,liquibase
+      base-path: /actuator  # Correct actuator path (relative to context-path)
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: always  # Changed from when-authorized for easier debugging
   health:
     db:
       enabled: true

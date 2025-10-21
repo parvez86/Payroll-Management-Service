@@ -70,11 +70,16 @@ public class JwtTokenProvider {
      * @return The signed JWT access token string
      */
     public String generateAccessToken(User user, String jti) {
+        log.debug("JWT: Generating access token for user: {} with JTI: {}", user.getUsername(), jti);
+        
         String userId = user.getId().toString();
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
+        
+        log.debug("JWT: Token details - UserId: {}, Expiry: {}, Roles: {}", 
+                userId, expiryDate, Set.of(user.getRole().name()));
 
-        return Jwts.builder()
+        String token = Jwts.builder()
                 .subject(userId)
                 .id(jti) // JWT ID for token tracking
                 .claim("username", user.getUsername())
@@ -84,6 +89,11 @@ public class JwtTokenProvider {
                 .expiration(expiryDate)
                 .signWith(key)
                 .compact();
+                
+        log.info("JWT: Access token generated successfully for user: {}, length: {}", 
+                user.getUsername(), token.length());
+        
+        return token;
     }
 
     /**
@@ -92,19 +102,30 @@ public class JwtTokenProvider {
      * @return The signed JWT refresh token string
      */
     public String generateRefreshToken(User user) {
+        log.debug("JWT: Generating refresh token for user: {}", user.getUsername());
+        
         String userId = user.getId().toString();
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + refreshTokenExpirationInMs);
+        String refreshJti = UUID.randomUUID().toString();
+        
+        log.debug("JWT: Refresh token details - UserId: {}, Expiry: {}, JTI: {}", 
+                userId, expiryDate, refreshJti);
 
-        return Jwts.builder()
+        String token = Jwts.builder()
                 .subject(userId)
-                .id(UUID.randomUUID().toString()) // Unique JTI for refresh token
+                .id(refreshJti) // Unique JTI for refresh token
                 .claim("username", user.getUsername())
                 .claim("type", "refresh") // Token type
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
                 .compact();
+                
+        log.info("JWT: Refresh token generated successfully for user: {}, length: {}", 
+                user.getUsername(), token.length());
+        
+        return token;
     }
 
     // --- Validation and Extraction ---

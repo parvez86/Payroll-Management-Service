@@ -1,0 +1,77 @@
+# Debug Profile Configuration for Docker
+# This extends the docker profile with debug-specific settings
+spring:
+  # Enhanced Logging for Debug
+  jpa:
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+        generate_statistics: true
+        use_sql_comments: true
+        jdbc:
+          batch_size: 1  # Disable batching for easier debugging
+    show-sql: true
+    
+  # Debug-friendly Jackson settings
+  jackson:
+    serialization:
+      indent-output: true
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+# Enhanced Logging Configuration for Debug
+logging:
+  level:
+    org.sp.payroll_service: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.data: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.hibernate.engine.transaction: DEBUG
+    liquibase: DEBUG
+    org.springframework.transaction: DEBUG
+    
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{50}:%line] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%logger{50}:%line] - %msg%n"
+    
+  file:
+    name: /app/logs/payroll-debug.log
+    
+# Management endpoints for debugging
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"  # Expose all actuator endpoints for debugging
+  endpoint:
+    health:
+      show-details: always
+    configprops:
+      show-values: always
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    git:
+      mode: full
+
+# Debug-specific application settings
+app:
+  debug:
+    enabled: true
+    log-requests: true
+    log-responses: true
+    
+server:
+  port: 20001
+  servlet:
+    context-path: /pms
+  error:
+    include-stacktrace: always
+    include-message: always
+    include-binding-errors: always

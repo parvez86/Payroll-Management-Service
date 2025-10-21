@@ -903,8 +903,6 @@ git push origin feature/employee-management
 ### Quick Links
 - **Swagger API Docs**: http://localhost:20001/pms/v1/api/swagger-ui/index.html
 - **Security Credentials**: [docs/SECURITY_CREDENTIALS.md](docs/SECURITY_CREDENTIALS.md)
-- **Development Guide**: [docs/development/development.md](docs/development/development.md)
-- **Architecture Modules**: [docs/development/module/](docs/development/module/)
 
 ### Troubleshooting Common Issues
 1. **Database Connection**: Verify PostgreSQL is running on port 5432
