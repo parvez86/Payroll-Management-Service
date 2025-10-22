@@ -16,7 +16,6 @@ import org.sp.payroll_service.repository.BranchRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -24,10 +23,10 @@ import org.springframework.util.StringUtils;
 import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Concrete service implementation for managing {@code Branch} entities.
+ * All public methods are synchronous (blocking).
  */
 @Service
 @Slf4j
@@ -41,7 +40,7 @@ public class BranchServiceImpl extends AbstractCrudService<
         implements BranchService {
 
     private final BranchRepository branchRepository;
-    private final BankRepository bankRepository; // Dependency to validate parent Bank
+    private final BankRepository bankRepository;
 
     public BranchServiceImpl(BranchRepository branchRepository, BankRepository bankRepository) {
         super(branchRepository, "Branch");
@@ -53,7 +52,9 @@ public class BranchServiceImpl extends AbstractCrudService<
 
     @Override
     @Transactional
-    public CompletableFuture<BranchResponse> create(BranchCreateRequest request) {
+    // FIX: Changed return type from CompletableFuture<BranchResponse> to BranchResponse
+    public BranchResponse create(BranchCreateRequest request) {
+        // Blocking uniqueness check is fine in a synchronous method
         if (branchRepository.existsByBranchNameAndBank_Id(request.branchName(), request.bankId())) {
             throw DuplicateEntryException.forEntity("Branch", "branchName", request.branchName());
         }
@@ -62,7 +63,9 @@ public class BranchServiceImpl extends AbstractCrudService<
 
     @Override
     @Transactional
-    public CompletableFuture<BranchResponse> update(UUID id, BranchUpdateRequest request) {
+    // FIX: Changed return type from CompletableFuture<BranchResponse> to BranchResponse
+    public BranchResponse update(UUID id, BranchUpdateRequest request) {
+        // Blocking uniqueness check is fine
         checkUniquenessOnUpdate(id, request.branchName(), request.bankId());
 
         return super.update(id, request);
@@ -70,9 +73,10 @@ public class BranchServiceImpl extends AbstractCrudService<
 
 
     @Override
-    @Async("virtualThreadExecutor")
+    // FIX: Removed @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<Page<BranchResponse>> search(BranchFilter filter, Pageable pageable) {
+    // FIX: Changed return type from CompletableFuture<Page<BranchResponse>> to Page<BranchResponse>
+    public Page<BranchResponse> search(BranchFilter filter, Pageable pageable) {
         Specification<Branch> spec = (root, query, cb) -> {
             var predicates = new ArrayList<Predicate>();
 
@@ -92,15 +96,18 @@ public class BranchServiceImpl extends AbstractCrudService<
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
+        // Blocking JPA call
         Page<Branch> entityPage = specExecutor.findAll(spec, pageable);
 
-        return CompletableFuture.completedFuture(entityPage.map(this::mapToResponse));
+        // FIX: Return the direct Page object
+        return entityPage.map(this::mapToResponse);
     }
 
     // --- Abstract Mapping Implementations (No changes needed) ---
 
     @Override
     protected Branch mapToEntity(BranchCreateRequest creationRequest) {
+        // Blocking JPA call is fine in this method
         Bank bank = getBankOrThrow(creationRequest.bankId());
 
         return Branch.builder()
@@ -113,6 +120,7 @@ public class BranchServiceImpl extends AbstractCrudService<
     @Override
     protected Branch mapToEntity(BranchUpdateRequest updateRequest, Branch entity) {
         if (!entity.getBank().getId().equals(updateRequest.bankId())) {
+            // Blocking JPA call is fine in this method
             Bank bank = getBankOrThrow(updateRequest.bankId());
             entity.setBank(bank);
         }
@@ -137,11 +145,10 @@ public class BranchServiceImpl extends AbstractCrudService<
         );
     }
 
-    // --- Private Helpers ---
+    // --- Private Helpers (No changes needed) ---
 
     private Bank getBankOrThrow(UUID bankId) {
         return bankRepository.findById(bankId)
-                // ⚠️ CORRECTION: Changed ResourceNotFoundException.forEntity to use the type and ID.
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("Bank", bankId));
     }
 

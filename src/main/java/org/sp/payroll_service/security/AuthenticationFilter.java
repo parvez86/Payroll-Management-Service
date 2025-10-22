@@ -96,37 +96,73 @@ public class AuthenticationFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
+        log.error("🔍 [MAIN-FILTER-DEBUG] URI: {}, Method: {}", request.getRequestURI(), request.getMethod());
+
         // Check if authentication is already present (e.g., from a previous filter in the chain)
         if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            log.debug("AUTH ALREADY SET: Skipping delegate check for {}", request.getRequestURI());
+            log.error("🔍 [MAIN-FILTER-DEBUG] ✅ AUTHENTICATION ALREADY SET - Skipping");
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
             Authentication authentication = null;
+            boolean authenticationAttempted = false;
 
             // 1. Iterate through delegates and attempt authentication
             for (AuthenticationDelegate delegate : delegates) {
-                authentication = delegate.attemptAuthentication(request);
-                if (authentication != null) {
-                    log.debug("✅ DELEGATE AUTH SUCCESS: Authentication set by {}", delegate.getClass().getSimpleName());
-                    break;
+                try {
+                    log.error("🔍 [MAIN-FILTER-DEBUG] 🔄 Trying delegate: {}", delegate.getClass().getSimpleName());
+                    authentication = delegate.attemptAuthentication(request);
+                    
+                    if (authentication != null) {
+                        log.error("🔍 [MAIN-FILTER-DEBUG] ✅ DELEGATE SUCCESS: {} authenticated user", delegate.getClass().getSimpleName());
+                        authenticationAttempted = true;
+                        break;
+                    } else {
+                        log.error("🔍 [MAIN-FILTER-DEBUG] 🔄 DELEGATE RETURNED NULL: {}", delegate.getClass().getSimpleName());
+                        // If JWT was present but returned null, consider this an authentication attempt
+                        if (delegate.getClass().getSimpleName().contains("Jwt")) {
+                            String authHeader = request.getHeader("Authorization");
+                            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                                authenticationAttempted = true;
+                                log.error("🔍 [MAIN-FILTER-DEBUG] ❌ JWT DELEGATE FAILED WITH TOKEN PRESENT");
+                            }
+                        }
+                    }
+                } catch (Exception delegateEx) {
+                    // Log the specific delegate that failed and continue to next delegate
+                    log.error("� [MAIN-FILTER-DEBUG] ❌ DELEGATE EXCEPTION: {} failed - {}", 
+                            delegate.getClass().getSimpleName(), delegateEx.getMessage());
+                    authenticationAttempted = true;
+                    // Don't break - let other delegates try, but mark as attempted
                 }
             }
 
             // 2. Set context if authentication was successful
             if (authentication != null) {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.error("� [MAIN-FILTER-DEBUG] ✅ AUTHENTICATION SET: User {} authenticated", authentication.getName());
+            } else {
+                log.error("🔍 [MAIN-FILTER-DEBUG] ❌ NO AUTHENTICATION: All delegates failed");
+                
+                // If authentication was attempted but failed (especially with JWT), don't continue
+                if (authenticationAttempted) {
+                    log.error("🔍 [MAIN-FILTER-DEBUG] ❌ AUTHENTICATION ATTEMPTED BUT FAILED - BLOCKING REQUEST");
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("{\"error\":\"Authentication failed\",\"message\":\"Invalid or expired token\"}");
+                    response.setContentType("application/json");
+                    log.error("🔍 [MAIN-FILTER-DEBUG] === MAIN FILTER END (401 SENT) ===");
+                    return;
+                }
             }
-            // 3. If authentication is still null, Spring Security will catch the failure later
 
         } catch (Exception ex) {
-            // Log critical errors (like InvalidTokenException, UserNotFound, or database errors)
-            // The exception itself will eventually be caught by the EntryPoint/AccessDeniedHandler.
-            log.warn("❌ AUTH DELEGATION FAILED: {} - {}", request.getRequestURI(), ex.getMessage());
+            // Log critical unexpected errors
+            log.error("❌ AUTH FILTER CRITICAL ERROR: {} - {}", request.getRequestURI(), ex.getMessage(), ex);
         }
 
+        log.error("🔍 [MAIN-FILTER-DEBUG] === MAIN FILTER END (CONTINUING TO NEXT FILTER) ===");
         filterChain.doFilter(request, response);
     }
 }

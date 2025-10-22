@@ -199,7 +199,7 @@ public class JwtAuthenticationService implements AuthenticationService {
     public void logout(LogoutRequest request) {
         String refreshToken = request.refreshToken();
 
-        Optional<TokenInfo> tokenInfoOptional = tokenInfoService.findByRefreshToken(refreshToken);
+        Optional<TokenInfo> tokenInfoOptional = tokenInfoService.findValidRefreshToken(refreshToken);
 
         TokenInfo tokenInfo = tokenInfoOptional
                 .orElseThrow(() -> new AuthenticationException("Invalid refresh token provided for logout.", ErrorCodes.AUTH_INVALID_TOKEN));

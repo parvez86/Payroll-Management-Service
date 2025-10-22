@@ -1,14 +1,19 @@
 package org.sp.payroll_service.domain.payroll.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.sp.payroll_service.api.auth.dto.UserCreateRequest;
 import org.sp.payroll_service.api.core.dto.CompanyResponse;
 import org.sp.payroll_service.api.core.dto.GradeResponse;
 import org.sp.payroll_service.api.payroll.dto.*;
 import org.sp.payroll_service.api.wallet.dto.AccountResponse;
 import org.sp.payroll_service.domain.auth.entity.User;
+import org.sp.payroll_service.domain.common.enums.AccountType;
+import org.sp.payroll_service.domain.common.enums.OwnerType;
+import org.sp.payroll_service.domain.common.enums.Role;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
 import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
 import org.sp.payroll_service.domain.common.service.AbstractCrudService;
+import org.sp.payroll_service.domain.core.entity.Branch;
 import org.sp.payroll_service.domain.core.entity.Company;
 import org.sp.payroll_service.domain.core.entity.Grade;
 import org.sp.payroll_service.domain.payroll.entity.Employee;
@@ -18,14 +23,23 @@ import org.sp.payroll_service.repository.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+
+/**
+ * Service implementation for Employee management operations.
+ * All methods are synchronous to maintain Spring Security context.
+ * Virtual thread performance is achieved at the controller level.
+ */
 @Service
 @Slf4j
 public class EmployeeServiceImpl extends AbstractCrudService<
@@ -42,32 +56,71 @@ public class EmployeeServiceImpl extends AbstractCrudService<
     private final GradeRepository gradeRepository;
     private final CompanyRepository companyRepository;
     private final AccountRepository accountRepository;
+    private final BranchRepository branchRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public EmployeeServiceImpl(
             EmployeeRepository employeeRepository,
             UserRepository userRepository,
             GradeRepository gradeRepository,
             CompanyRepository companyRepository,
-            AccountRepository accountRepository) {
+            AccountRepository accountRepository,
+            BranchRepository branchRepository,
+            PasswordEncoder passwordEncoder) {
         super(employeeRepository, "Employee");
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
         this.gradeRepository = gradeRepository;
         this.companyRepository = companyRepository;
         this.accountRepository = accountRepository;
+        this.branchRepository = branchRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // --- Overrides for Creation and Update with Business Logic ---
 
     @Override
+    @Transactional(readOnly = true)
+    public EmployeeResponse findById(UUID id) {
+        log.debug("🔍 [EMPLOYEE-SERVICE] Finding employee by ID: {}", id);
+
+        Optional<Employee> employeeOpt = employeeRepository.findByIdWithJoins(id);
+        log.debug("🔍 [EMPLOYEE-SERVICE] Employee found: {}", employeeOpt.isPresent());
+
+        if (employeeOpt.isPresent()) {
+            Employee employee = employeeOpt.get();
+            log.debug("🔍 [EMPLOYEE-SERVICE] Employee name: {}", employee.getName());
+            log.debug("🔍 [EMPLOYEE-SERVICE] Grade null: {}", employee.getGrade() == null);
+            log.debug("🔍 [EMPLOYEE-SERVICE] Company null: {}", employee.getCompany() == null);
+            log.debug("🔍 [EMPLOYEE-SERVICE] Account null: {}", employee.getAccount() == null);
+
+            EmployeeResponse response = mapToResponse(employee);
+            log.debug("🔍 [EMPLOYEE-SERVICE] Response mapped successfully");
+            return response;
+        } else {
+            log.warn("🔍 [EMPLOYEE-SERVICE] ❌ Employee not found with ID: {}", id);
+            throw new ResponseStatusException(NOT_FOUND, "Employee not found with ID: " + id);
+        }
+    }
+
+    @Override
     @Transactional
-    public CompletableFuture<EmployeeResponse> create(CreateEmployeeRequest request) {
+    public EmployeeResponse create(CreateEmployeeRequest request) {
         log.info("Attempting to create employee with code: {}", request.bizId());
 
         // 1. Business Rule: Check uniqueness of the employee code
+        if (userRepository.findByUsername(request.username()).isPresent()) {
+            throw DuplicateEntryException.forEntity("Username", "username", request.username());
+        }
+
+        if (userRepository.findByEmail(request.email()).isPresent()) {
+            throw DuplicateEntryException.forEntity("Email", "email", request.username());
+        }
+
         if (employeeRepository.findByCode(request.bizId()).isPresent()) {
             throw DuplicateEntryException.forEntity("Employee", "code", request.bizId());
         }
+
 
         // 2. Fetch associated entities
         // Grade is required
@@ -88,62 +141,82 @@ public class EmployeeServiceImpl extends AbstractCrudService<
      */
     @Override
     @Transactional
-    public CompletableFuture<EmployeeResponse> update(UUID id, EmployeeUpdateRequest request) {
+    public EmployeeResponse update(UUID id, EmployeeUpdateRequest request) {
         Employee existingEmployee = employeeRepository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("Employee", id));
 
-        // 1. Handle User-related updates (Email, potentially Phone if shared with User entity)
-        boolean isUserUpdated = false;
-        if (request.email() != null) {
-            User user = existingEmployee.getUser();
-            if (user != null) {
-                user.setEmail(request.email());
-                isUserUpdated = true;
-            }
-        }
-        if (isUserUpdated) {
-            userRepository.save(existingEmployee.getUser());
-        }
-
-        // 2. Handle Grade update
-        if (request.grade() != null) {
-            // Find the Grade entity (assuming the DTO grade carries the name/id needed for lookup)
-            // NOTE: This assumes Grade DTO's 'name' property is sufficient for lookup.
-            Grade newGrade = gradeRepository.findByName(request.grade().getName())
-                    .orElseThrow(() -> ResourceNotFoundException.forEntity("Grade", request.grade().getName()));
+        // 1. Handle Grade update (validate grade exists)
+        if (request.gradeId() != null) {
+            Grade newGrade = gradeRepository.findById(request.gradeId())
+                    .orElseThrow(() -> ResourceNotFoundException.forEntity("Grade", request.gradeId()));
             existingEmployee.setGrade(newGrade);
         }
 
-        // 3. Handle Account details update
-        boolean isAccountUpdated = false;
-        if (request.bankAccountNumber() != null || request.bankRoutingNumber() != null) {
-            Account account = existingEmployee.getAccount();
-            if (account != null) {
-                if (request.bankAccountNumber() != null) {
-                    account.setAccountNumber(request.bankAccountNumber());
-                    isAccountUpdated = true;
-                }
-                // bankRoutingNumber update logic (complex, but applied to Account entity)
-                if (request.bankRoutingNumber() != null) {
-                    account.getBranch().getBank().setSwiftBicCode(request.bankRoutingNumber());
-                    isAccountUpdated = true;
-                }
+        // 2. Handle User-related updates
+        if (existingEmployee.getUser() != null) {
+            boolean userUpdated = false;
+            
+            if (request.email() != null) {
+                // Check email uniqueness
+                userRepository.findByEmail(request.email()).ifPresent(user -> {
+                    if (!user.getId().equals(existingEmployee.getUser().getId())) {
+                        throw DuplicateEntryException.forEntity("User", "email", request.email());
+                    }
+                });
+                existingEmployee.getUser().setEmail(request.email());
+                userUpdated = true;
+            }
+            
+            if (request.password() != null) {
+                existingEmployee.getUser().setPasswordHash(passwordEncoder.encode(request.password()));
+                userUpdated = true;
+            }
+            
+            if (userUpdated) {
+                userRepository.save(existingEmployee.getUser());
             }
         }
-        if (isAccountUpdated) {
-            accountRepository.save(existingEmployee.getAccount());
+
+        // 3. Handle Account updates
+        if (existingEmployee.getAccount() != null) {
+            boolean accountUpdated = false;
+            
+            if (request.accountName() != null) {
+                existingEmployee.getAccount().setAccountName(request.accountName());
+                accountUpdated = true;
+            }
+            
+            if (request.bankAccountNumber() != null) {
+                existingEmployee.getAccount().setAccountNumber(request.bankAccountNumber());
+                accountUpdated = true;
+            }
+            
+            if (request.overdraftLimit() != null) {
+                existingEmployee.getAccount().setOverdraftLimit(request.overdraftLimit());
+                accountUpdated = true;
+            }
+            
+            if (request.branchId() != null) {
+                Branch newBranch = branchRepository.findById(request.branchId())
+                        .orElseThrow(() -> ResourceNotFoundException.forEntity("Branch", request.branchId()));
+                existingEmployee.getAccount().setBranch(newBranch);
+                accountUpdated = true;
+            }
+            
+            if (accountUpdated) {
+                accountRepository.save(existingEmployee.getAccount());
+            }
         }
 
-        // Delegate to abstract base class for simple field mapping and final save
+        // 4. Delegate to abstract base class for simple field mapping and final save
         return super.update(id, request);
     }
 
     // --- Custom Search Implementation ---
 
     @Override
-    @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<Page<EmployeeResponse>> search(EmployeeFilterRequest filter, Pageable pageable) {
+    public Page<EmployeeResponse> search(EmployeeFilterRequest filter, Pageable pageable) {
         Specification<Employee> spec = (root, query, cb) -> {
             var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
 
@@ -172,7 +245,7 @@ public class EmployeeServiceImpl extends AbstractCrudService<
         };
 
         Page<Employee> entityPage = employeeRepository.findAll(spec, pageable);
-        return CompletableFuture.completedFuture(entityPage.map(this::mapToResponse));
+        return entityPage.map(this::mapToResponse);
     }
 
     // --- Abstract Mapping Implementations ---
@@ -183,45 +256,122 @@ public class EmployeeServiceImpl extends AbstractCrudService<
         Grade grade = gradeRepository.findById(creationRequest.gradeId()).get();
         Company company = companyRepository.findAll().stream().findFirst().get();
 
-        // 1. Create and Save Account (Transactional boundary handles rollback if Employee save fails)
+        // 1. Create and save User first
+        User user = User
+                .builder()
+                .username(creationRequest.username())
+                .role(Role.EMPLOYEE)
+                .email(creationRequest.email())
+                .passwordHash(passwordEncoder.encode(creationRequest.password()))
+                .build();
+        user = userRepository.save(user);
+        
+        log.debug("Created user with ID: {}", user.getId());
+
+        // 2. Get branch entity for account creation
+        Branch branch = branchRepository.findById(creationRequest.branchId())
+                .orElseThrow(() -> ResourceNotFoundException.forEntity("Branch", creationRequest.branchId()));
+                
+        // 3. Create and Save Account with proper owner information
         Account account = Account.builder()
-                .accountNumber(creationRequest.accountRequest().accountNumber())
-                .accountName(creationRequest.accountRequest().accountName())
-                // ... map remaining fields from CreateAccountRequest
+                .ownerType(OwnerType.EMPLOYEE) // Set owner type
+                .ownerId(user.getId()) // Set owner ID to the saved user's ID
+                .accountType(AccountType.SAVINGS)
+                .accountNumber(creationRequest.accountNumber())
+                .accountName(creationRequest.accountName())
+                .currentBalance(BigDecimal.ZERO) // Initialize with zero balance
+                .overdraftLimit(creationRequest.overdraftLimit())
+                .branch(branch) // Set the branch entity
                 .build();
         Account savedAccount = accountRepository.save(account);
-
-        // 2. Placeholder User (If the flow requires linking a User that doesn't exist yet,
-        // this needs robust logic. Assuming a temporary or default User is provided.)
-        User placeholderUser = userRepository.findById(UUID.randomUUID()) // Placeholder lookup
-                .orElseGet(() -> User.builder().id(UUID.randomUUID()).build()); // Create mock User if not found
-
+        
+        log.debug("Created account with ID: {} for user: {}", savedAccount.getId(), user.getId());
+        
+        // 4. Generate employee code
+        String code = creationRequest.bizId() != null ? creationRequest.bizId() : getBizId();
+        
+        // 5. Create employee entity
         return Employee.builder()
-                .code(creationRequest.bizId())
+                .code(code)
                 .name(creationRequest.name())
                 .address(creationRequest.address())
                 .mobile(creationRequest.mobile())
                 .grade(grade)
                 .company(company)
                 .account(savedAccount) // Link the saved account
-                .user(placeholderUser)
+                .user(user) // Link the saved user
                 .build();
+    }
+
+    private String getBizId() {
+        Integer maxId = employeeRepository.findMaxIdNumber();
+        // Get the next ID (increment by 1)
+        int nextId = (maxId != null) ? maxId + 1 : 1;
+        return String.format("%04d", nextId);
     }
 
     @Override
     protected Employee mapToEntity(EmployeeUpdateRequest updateRequest, Employee entity) {
         // Apply changes only if the field is NOT null (robust PATCH behavior)
+        
+        // Basic employee fields
+        if (updateRequest.name() != null) {
+            entity.setName(updateRequest.name());
+        }
+        
+        if (updateRequest.address() != null) {
+            entity.setAddress(updateRequest.address());
+        }
+        
+        if (updateRequest.mobile() != null) {
+            entity.setMobile(updateRequest.mobile());
+        }
+        
+        // Legacy phoneNumber field mapping (if still needed)
         if (updateRequest.phoneNumber() != null) {
             entity.setMobile(updateRequest.phoneNumber());
         }
 
-        // NOTE: Grade, Account, and User updates are handled in the overridden 'update' method above,
-        // to ensure the related entities are saved in their respective repositories if needed.
+        // User-related updates
+        if (entity.getUser() != null) {
+            if (updateRequest.email() != null) {
+                entity.getUser().setEmail(updateRequest.email());
+            }
+            
+            // Password update
+            if (updateRequest.password() != null) {
+                entity.getUser().setPasswordHash(passwordEncoder.encode(updateRequest.password()));
+            }
+        }
+
+        // Grade update - handle in the overridden update() method for proper validation
+        
+        // Account updates
+        if (entity.getAccount() != null) {
+            if (updateRequest.accountName() != null) {
+                entity.getAccount().setAccountName(updateRequest.accountName());
+            }
+            
+            if (updateRequest.bankAccountNumber() != null) {
+                entity.getAccount().setAccountNumber(updateRequest.bankAccountNumber());
+            }
+            
+            if (updateRequest.overdraftLimit() != null) {
+                entity.getAccount().setOverdraftLimit(updateRequest.overdraftLimit());
+            }
+            
+            // Branch update - need to fetch new branch entity
+            if (updateRequest.branchId() != null) {
+                Branch newBranch = branchRepository.findById(updateRequest.branchId())
+                        .orElseThrow(() -> ResourceNotFoundException.forEntity("Branch", updateRequest.branchId()));
+                entity.getAccount().setBranch(newBranch);
+            }
+        }
 
         // Status update logic
         if (updateRequest.status() != null) {
-            // NOTE: Assuming EmploymentStatus has a utility to map to BaseEntity's EntityStatus enum
-            // entity.setStatus(updateRequest.transactionStatus().toEntityStatus());
+            // Map EmploymentStatus to EntityStatus if needed
+            // entity.setStatus(updateRequest.status().toEntityStatus());
         }
 
         return entity;
@@ -229,82 +379,112 @@ public class EmployeeServiceImpl extends AbstractCrudService<
 
     @Override
     protected EmployeeResponse mapToResponse(Employee entity) {
-        // Complete mapping logic for nested DTOs (GradeResponse and AccountResponse)
+        log.error("🔍 [EMPLOYEE-MAPPING-DEBUG] Employee ID: {}", entity != null ? entity.getId() : "NULL");
+        
+        if (entity == null) {
+            log.error("🔍 [EMPLOYEE-MAPPING-DEBUG] ❌ Employee entity is NULL");
+            return null;
+        }
+        
+        try {
+            // Complete mapping logic for nested DTOs (GradeResponse and AccountResponse)
+            GradeResponse gradeResponse = null;
+            if (entity.getGrade() != null) {
+                gradeResponse = new GradeResponse(
+                        entity.getGrade().getId(),
+                        entity.getGrade().getName(),
+                        entity.getGrade().getRank(),
+                        entity.getGrade().getParent() != null? entity.getGrade().getParent().getId():null,
+                        entity.getGrade().getParent() != null? entity.getGrade().getParent().getName():null,
+                        entity.getCreatedAt(),
+                        entity.getCreatedBy()
+                );
+                log.error("🔍 [EMPLOYEE-MAPPING-DEBUG] ✅ Grade mapped: {}", gradeResponse.name());
+            } else {
+                log.error("🔍 [EMPLOYEE-MAPPING-DEBUG] ❌ Grade is NULL");
+            }
 
-        GradeResponse gradeResponse = new GradeResponse(
-                entity.getGrade().getId(),
-                entity.getGrade().getName(),
-                entity.getGrade().getRank(),
-                entity.getGrade().getParent() != null? entity.getGrade().getParent().getId():null,
-                entity.getGrade().getParent() != null? entity.getGrade().getParent().getName():null,
-                entity.getCreatedAt(),
-                entity.getCreatedBy()
-        );
+            log.error("🔍 [EMPLOYEE-MAPPING-DEBUG] Checking account...");
+            AccountResponse accountResponse = null;
+            if (entity.getAccount() != null) {
+                accountResponse = new AccountResponse(
+                        entity.getAccount().getId(),
+                        entity.getAccount().getOwnerType(),
+                        entity.getAccount().getOwnerId(),
+                        entity.getAccount().getAccountType(),
+                        entity.getAccount().getAccountName(),
+                        entity.getAccount().getAccountNumber(),
+                        entity.getAccount().getCurrentBalance(),
+                        entity.getAccount().getOverdraftLimit(),
+                        entity.getAccount().getBranch() != null? entity.getAccount().getBranch().getId():null,
+                        entity.getAccount().getBranch() != null? entity.getAccount().getBranch().getBranchName():null,
+                        entity.getStatus(),
+                        entity.getCreatedAt(),
+                        entity.getCreatedBy()
+                );
+                log.error("🔍 [EMPLOYEE-MAPPING-DEBUG] ✅ Account mapped: {}", accountResponse.accountNumber());
+            } else {
+                log.error("🔍 [EMPLOYEE-MAPPING-DEBUG] ❌ Account is NULL");
+            }
 
-        AccountResponse accountResponse = new AccountResponse(
-                entity.getAccount().getId(),
-                entity.getAccount().getOwnerType(),
-                entity.getAccount().getOwnerId(),
-                entity.getAccount().getAccountType(),
-                entity.getAccount().getAccountName(),
-                entity.getAccount().getAccountNumber(),
-                entity.getAccount().getCurrentBalance(),
-                entity.getAccount().getOverdraftLimit(),
-                entity.getAccount().getBranch() != null? entity.getAccount().getBranch().getId():null,
-                entity.getAccount().getBranch() != null? entity.getAccount().getBranch().getBranchName():null,
-                entity.getStatus(),
-                entity.getCreatedAt(),
-                entity.getCreatedBy()
-        );
+            log.error("🔍 [EMPLOYEE-MAPPING-DEBUG] Checking company...");
+            CompanyResponse companyResponse = null;
+            if (entity.getCompany() != null) {
+                companyResponse = new CompanyResponse(
+                        entity.getCompany().getId(),
+                        entity.getCompany().getName(),
+                        entity.getCompany().getDescription(),
+                        entity.getCompany().getSalaryFormula() != null ? entity.getCompany().getSalaryFormula().getId() : null,
+                        null,
+                        entity.getCompany().getCreatedAt(),
+                        entity.getCompany().getCreatedBy()
+                );
+                log.error("🔍 [EMPLOYEE-MAPPING-DEBUG] ✅ Company mapped: {}", companyResponse.name());
+            } else {
+                log.error("🔍 [EMPLOYEE-MAPPING-DEBUG] ❌ Company is NULL");
+            }
 
-        CompanyResponse companyResponse = new CompanyResponse(
-                entity.getCompany().getId(),
-                entity.getCompany().getName(),
-                entity.getCompany().getDescription(),
-                entity.getCompany().getSalaryFormula().getId(),
-                null,
-                entity.getCompany().getCreatedAt(),
-                entity.getCompany().getCreatedBy()
-        );
-
-        return new EmployeeResponse(
-                entity.getId(),
-                entity.getCode(),
-                entity.getName(),
-                entity.getAddress(),
-                entity.getMobile(),
-                companyResponse,
-                gradeResponse,
-                accountResponse,
-                entity.getStatus()
-        );
+            EmployeeResponse response = new EmployeeResponse(
+                    entity.getId(),
+                    entity.getCode(),
+                    entity.getName(),
+                    entity.getAddress(),
+                    entity.getMobile(),
+                    companyResponse,
+                    gradeResponse,
+                    accountResponse,
+                    entity.getStatus()
+            );
+            
+            log.error("🔍 [EMPLOYEE-MAPPING-DEBUG] ✅ Response created: {}", response.id());
+            return response;
+            
+        } catch (Exception e) {
+            log.error("🔍 [EMPLOYEE-MAPPING-DEBUG] ❌ MAPPING FAILED: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 
     @Override
-    @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<EmployeeResponse> findByBizId(String bizId) {
+    public EmployeeResponse findByBizId(String bizId) {
         log.debug("Finding employee by business ID: {}", bizId);
-        return CompletableFuture.supplyAsync(() -> {
-            Employee employee = employeeRepository.findByCode(bizId)
-                    .orElseThrow(() -> ResourceNotFoundException.forEntity("Employee", bizId));
-            return mapToResponse(employee);
-        });
+        Employee employee = employeeRepository.findByCode(bizId)
+                .orElseThrow(() -> ResourceNotFoundException.forEntity("Employee", bizId));
+        return mapToResponse(employee);
     }
 
     @Override
-    @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<Object> getEmployeeCountByGrade() {
+    public Object getEmployeeCountByGrade() {
         log.debug("Getting employee count by grade");
-        return CompletableFuture.supplyAsync(employeeRepository::getEmployeeCountByGrade);
+        return employeeRepository.getEmployeeCountByGrade();
     }
 
     @Override
-    @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<Long> getTotalEmployeeCount() {
+    public Long getTotalEmployeeCount() {
         log.debug("Getting total employee count");
-        return CompletableFuture.supplyAsync(employeeRepository::count);
+        return employeeRepository.count();
     }
 }

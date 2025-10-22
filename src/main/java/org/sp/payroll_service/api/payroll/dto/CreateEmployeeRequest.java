@@ -1,12 +1,10 @@
 package org.sp.payroll_service.api.payroll.dto;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import org.sp.payroll_service.api.wallet.dto.CreateAccountRequest;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 /**
@@ -36,7 +34,23 @@ public record CreateEmployeeRequest(
         @NotNull(message = "Grade ID is required.")
         UUID gradeId,
 
-        @NotNull(message = "Account details are required.")
-        @Valid
-        CreateAccountRequest accountRequest
+        @NotBlank @Size(min = 3, max = 50) String username,
+        @Email String email,
+        @NotBlank @Size(min = 6) String password,
+
+        @NotBlank(message = "Account name (Holder name) is required.")
+        @Size(max = 100, message = "Account name must be less than 100 characters.")
+        String accountName,
+
+        // --- Account Number (Validation Refinement) ---
+        @NotBlank(message = "Account number is required and unique.")
+        @Size(min = 10, max = 38, message = "Account number length is invalid.")
+        String accountNumber,
+
+        @NotNull(message = "Overdraft limit is required.")
+        @DecimalMin(value = "0.00", inclusive = true, message = "Overdraft limit cannot be negative.")
+        BigDecimal overdraftLimit,
+
+        @NotNull(message = "Branch ID is required for bank branch linkage.")
+        UUID branchId
 ) {}

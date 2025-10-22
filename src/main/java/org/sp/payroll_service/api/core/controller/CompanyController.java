@@ -25,11 +25,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * REST Controller for managing the {@code Company} entity (The Organization).
  * All operations are secured as only high-level roles should configure the company's financial structure.
+ * This is a **synchronous** controller implementation.
  */
 @Tag(name = "Company Management", description = "CRUD and Search operations for the core organizational entity and its main payroll account.")
 @RestController
@@ -46,11 +46,11 @@ public class CompanyController {
     @Operation(summary = "Create a new Company and its main payroll account.")
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public CompletableFuture<ResponseEntity<CompanyResponse>> createCompany(
+    public ResponseEntity<CompanyResponse> createCompany(
             @Valid @RequestBody CompanyCreateRequest request) {
         log.info("Request to create new company: {}", request.name());
-        return companyService.create(request)
-                .thenApply(response -> ResponseEntity.status(HttpStatus.CREATED).body(response));
+        CompanyResponse response = companyService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**
@@ -59,11 +59,10 @@ public class CompanyController {
     @Operation(summary = "Get a Company by ID.")
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public CompletableFuture<ResponseEntity<CompanyResponse>> getCompanyById(
+    public ResponseEntity<CompanyResponse> getCompanyById(
             @PathVariable UUID id) {
         log.debug("Request to fetch company with ID: {}", id);
-        return companyService.findById(id)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(companyService.findById(id));
     }
 
     /**
@@ -72,12 +71,11 @@ public class CompanyController {
     @Operation(summary = "Update Company metadata (e.g., name).")
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public CompletableFuture<ResponseEntity<CompanyResponse>> updateCompany(
+    public ResponseEntity<CompanyResponse> updateCompany(
             @PathVariable UUID id,
             @Valid @RequestBody CompanyUpdateRequest request) {
         log.info("Request to update company with ID: {}", id);
-        return companyService.update(id, request)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(companyService.update(id, request));
     }
 
     /**
@@ -87,10 +85,10 @@ public class CompanyController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
-    public CompletableFuture<ResponseEntity<Void>> deleteCompany(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteCompany(@PathVariable UUID id) {
         log.warn("Request to delete company with ID: {}", id);
-        return companyService.delete(id)
-                .thenApply(v -> ResponseEntity.noContent().build());
+        companyService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 
     /**
@@ -99,12 +97,11 @@ public class CompanyController {
     @Operation(summary = "Search and paginate Company records.")
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public CompletableFuture<ResponseEntity<Page<CompanyResponse>>> searchCompanies(
+    public ResponseEntity<Page<CompanyResponse>> searchCompanies(
             @ModelAttribute CompanyFilter filter,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
         log.debug("Request to search companies with filters: {}", filter);
-        return companyService.search(filter, pageable)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(companyService.search(filter, pageable));
     }
 
     /**
@@ -113,42 +110,39 @@ public class CompanyController {
     @Operation(summary = "Top-up company account balance")
     @PostMapping("/{companyId}/topup")
     @PreAuthorize("hasRole('ADMIN')")
-    public CompletableFuture<ResponseEntity<CompanyResponse>> topUpCompanyAccount(
+    public ResponseEntity<CompanyResponse> topUpCompanyAccount(
             @PathVariable UUID companyId,
             @RequestBody CompanyTopUpRequest request) {
         log.info("Request to top-up company {} with amount: {}", companyId, request.amount());
-        return companyService.topUpAccount(companyId, request)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(companyService.topUpAccount(companyId, request));
     }
 
     @Operation(summary = "Get company account balance")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Company account balance retrieved successfully"),
-        @ApiResponse(responseCode = "404", description = "Company not found"),
-        @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(responseCode = "200", description = "Company account balance retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Company not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/{companyId}/account")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public CompletableFuture<ResponseEntity<AccountResponse>> getCompanyAccount(
+    public ResponseEntity<AccountResponse> getCompanyAccount(
             @Parameter(description = "Company ID") @PathVariable UUID companyId) {
         log.debug("Request to get company account for company: {}", companyId);
-        return companyService.getCompanyAccount(companyId)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(companyService.getCompanyAccount(companyId));
     }
 
     @Operation(summary = "Get company transaction history")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Company transactions retrieved successfully"),
-        @ApiResponse(responseCode = "404", description = "Company not found"),
-        @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(responseCode = "200", description = "Company transactions retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "Company not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/{companyId}/transactions")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public CompletableFuture<ResponseEntity<Page<TransactionResponse>>> getCompanyTransactions(
+    public ResponseEntity<Page<TransactionResponse>> getCompanyTransactions(
             @Parameter(description = "Company ID") @PathVariable UUID companyId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         log.debug("Request to get company transactions for company: {}", companyId);
-        return companyService.getCompanyTransactions(companyId, pageable)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(companyService.getCompanyTransactions(companyId, pageable));
     }
 }

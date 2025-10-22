@@ -44,12 +44,17 @@ public class JwtAuthenticationFilter implements AuthenticationDelegate {
      * Attempts authentication by looking for a JWT in the Authorization header.
      *
      * @param request The current HTTP request.
-     * @return A valid {@code Authentication} token if the JWT is present and valid.
-     * @throws InvalidTokenException if the token is present but invalid/expired.
-     * @throws UsernameNotFoundException if the user in the token is not found.
+     * @return A valid {@code Authentication} token if the JWT is present and valid, null otherwise.
      */
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request) throws Exception {
+        String requestURI = request.getRequestURI();
+        String method = request.getMethod();
+        
+        log.error("🔍 [JWT-DEBUG] === AUTHENTICATION ATTEMPT START ===");
+        log.error("🔍 [JWT-DEBUG] Method: {} URI: {}", method, requestURI);
+        log.error("🔍 [JWT-DEBUG] Headers: Authorization = {}", request.getHeader("Authorization"));
+        
         String jwt = extractJwt(request);
 
         if (!StringUtils.hasText(jwt)) {
@@ -59,26 +64,44 @@ public class JwtAuthenticationFilter implements AuthenticationDelegate {
 
         log.debug("🎫 JWT DELEGATE: Token found. Validating and processing.");
 
-        // 1. Validate token (will throw InvalidTokenException on failure)
-        tokenProvider.validateToken(jwt);
+        try {
+            // 1. Validate token (will throw InvalidTokenException on failure)
+            tokenProvider.validateToken(jwt);
+            log.error("🔍 [JWT-DEBUG] ✅ TOKEN VALIDATION SUCCESSFUL");
 
-        // 2. Extract user ID and load user from database
-        UUID userId = tokenProvider.getUserIdFromJWT(jwt);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.warn("❌ USER NOT FOUND: User ID {} from token not found in database", userId);
-                    return new UsernameNotFoundException("User not found: " + userId);
-                });
+            log.error("🔍 [JWT-DEBUG] 🆔 Extracting user ID from token...");
+            // 2. Extract user ID and load user from database
+            UUID userId = tokenProvider.getUserIdFromJWT(jwt);
+            log.error("🔍 [JWT-DEBUG] ✅ USER ID EXTRACTED: {}", userId);
+            
+            log.error("🔍 [JWT-DEBUG] 🔍 Looking up user in database...");
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        log.error("🔍 [JWT-DEBUG] ❌ USER NOT FOUND: User ID {} from token not found in database", userId);
+                        return new UsernameNotFoundException("User not found: " + userId);
+                    });
 
-        // 3. Create UserDetails and Authentication object
-        UserDetails userDetails = UserDetailsImpl.create(user);
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                userDetails, null, userDetails.getAuthorities());
+            log.error("🔍 [JWT-DEBUG] ✅ USER FOUND: {} with role: {}", user.getUsername(), user.getRole());
 
-        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            // 3. Create UserDetails and Authentication object
+            UserDetails userDetails = UserDetailsImpl.create(user);
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities());
 
-        log.debug("🔐 JWT AUTH SUCCESS: User {} authenticated via JWT", user.getUsername());
-        return authentication;
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+            log.error("� [JWT-DEBUG] ✅ AUTHENTICATION SUCCESSFUL for user: {}", user.getUsername());
+            return authentication;
+            
+        } catch (InvalidTokenException ex) {
+            // Invalid/expired token - log and return null (let other delegates try or fail at Spring Security level)
+            log.error("� [JWT-DEBUG] ❌ TOKEN VALIDATION FAILED: {}", ex.getMessage());
+            return null;
+        } catch (UsernameNotFoundException ex) {
+            // User not found - this is a more serious issue, rethrow
+            log.error("🔍 [JWT-DEBUG] ❌ USER NOT FOUND: {}", ex.getMessage());
+            throw ex;
+        }
     }
 
     /**

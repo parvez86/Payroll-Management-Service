@@ -21,21 +21,21 @@ public interface PayrollService {
      * @param request batch creation data
      * @return created batch details
      */
-    CompletableFuture<PayrollBatchResponse> createPayrollBatch(CreatePayrollBatchRequest request);
+    PayrollBatchResponse createPayrollBatch(CreatePayrollBatchRequest request);
     
     /**
      * Calculates salaries for all employees without executing transfers.
      * @param batchId batch identifier
      * @return salary calculations for all employees
      */
-    CompletableFuture<List<SalaryCalculation>> calculateSalaries(UUID batchId);
+    List<SalaryCalculation> calculateSalaries(UUID batchId);
     
     /**
      * Calculates salaries for all employees without a specific batch.
      * @param companyId company identifier
      * @return salary calculations for all employees
      */
-    CompletableFuture<List<SalaryCalculation>> calculateSalariesForCompany(UUID companyId);
+    List<SalaryCalculation> calculateSalariesForCompany(UUID companyId);
     
     /**
      * Processes payroll batch with ACID compliance.
@@ -45,7 +45,7 @@ public interface PayrollService {
      * @throws InsufficientFundsException if company balance insufficient
      * @throws PayrollProcessingException if processing fails
      */
-    CompletableFuture<PayrollResult> processPayroll(UUID batchId);
+    PayrollResult processPayroll(UUID batchId);
     
     /**
      * Retrieves all payroll batches with optional filtering.
@@ -53,14 +53,14 @@ public interface PayrollService {
      * @param pageable pagination parameters
      * @return paginated batch summaries
      */
-    CompletableFuture<Page<PayrollBatchSummary>> getAllBatches(PayrollBatchFilter filter, Pageable pageable);
+    Page<PayrollBatchSummary> getAllBatches(PayrollBatchFilter filter, Pageable pageable);
     
     /**
      * Retrieves a specific payroll batch by ID.
      * @param batchId batch identifier
      * @return batch details
      */
-    CompletableFuture<PayrollBatchResponse> getBatchById(UUID batchId);
+    PayrollBatchResponse getBatchById(UUID batchId);
     
     /**
      * Retrieves payroll items for a specific batch.
@@ -68,19 +68,19 @@ public interface PayrollService {
      * @param pageable pagination parameters
      * @return paginated payroll items
      */
-    CompletableFuture<Page<PayrollItemResponse>> getBatchItems(UUID batchId, Pageable pageable);
+    Page<PayrollItemResponse> getBatchItems(UUID batchId, Pageable pageable);
     
     /**
      * Retries a failed payroll item.
      * @param payrollItemId payroll item identifier
      * @return updated payroll item
      */
-    CompletableFuture<PayrollItemResponse> retryPayrollItem(UUID payrollItemId);
+    PayrollItemResponse retryPayrollItem(UUID payrollItemId);
     
     /**
      * Cancels a pending payroll batch.
      * @param batchId batch identifier
      * @return updated batch response
      */
-    CompletableFuture<PayrollBatchResponse> cancelBatch(UUID batchId);
+    PayrollBatchResponse cancelBatch(UUID batchId);
 }

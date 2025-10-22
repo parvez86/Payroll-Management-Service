@@ -2,6 +2,8 @@ package org.sp.payroll_service.domain.auth.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.api.auth.dto.*;
+// ... other imports ...
+import org.sp.payroll_service.api.wallet.dto.AccountResponse;
 import org.sp.payroll_service.domain.auth.entity.User;
 import org.sp.payroll_service.domain.auth.service.UserService;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
@@ -9,7 +11,13 @@ import org.sp.payroll_service.domain.common.exception.ErrorCodes;
 import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
 import org.sp.payroll_service.domain.common.exception.ValidationException;
 import org.sp.payroll_service.domain.common.service.AbstractCrudService;
+import org.sp.payroll_service.domain.core.entity.Company;
+import org.sp.payroll_service.domain.wallet.entity.Account;
+import org.sp.payroll_service.repository.AccountRepository;
+import org.sp.payroll_service.repository.CompanyRepository;
+import org.sp.payroll_service.repository.EmployeeRepository;
 import org.sp.payroll_service.repository.UserRepository;
+import org.sp.payroll_service.security.JwtTokenProvider;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -25,7 +33,9 @@ import java.util.concurrent.CompletableFuture;
  * Concrete service implementation for managing {@code User} entities.
  * <p>
  * This class extends the generic {@code AbstractCrudService} to inherit boilerplate CRUD operations
- * (create, find, update, delete) and adds domain-specific business logic, such as:
+ * and adds domain-specific business logic. **CRUD operations are synchronous** to maintain the
+ * Spring Security context and transactional integrity, with heavy lifting (like searching)
+ * being offloaded to dedicated asynchronous executors.
  * <ul>
  * <li>Password hashing during creation and update.</li>
  * <li>Unique constraint checks for username and email.</li>
@@ -39,6 +49,9 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmployeeRepository employeeRepository;
+    private final CompanyRepository companyRepository;
+    private final JwtTokenProvider jwtTokenProvider;
 
     /**
      * Constructs the UserServiceImpl.
@@ -49,10 +62,13 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      * @param userRepository  The JPA repository for User entities.
      * @param passwordEncoder The Spring Security password encoder for hashing.
      */
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, EmployeeRepository employeeRepository, CompanyRepository companyRepository, JwtTokenProvider jwtTokenProvider) {
         super(userRepository, "User");
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.employeeRepository = employeeRepository;
+        this.companyRepository = companyRepository;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     // --- Overrides for Creation and Update with Business Logic ---
@@ -61,12 +77,12 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      * Creates a new user after performing uniqueness checks on the username and email.
      *
      * @param request The DTO containing the user creation data.
-     * @return A {@code CompletableFuture} containing the {@code UserResponse} DTO of the newly created user.
+     * @return The {@code UserResponse} DTO of the newly created user.
      * @throws DuplicateEntryException if the username or email already exists.
      */
     @Override
     @Transactional
-    public CompletableFuture<UserResponse> create(UserCreateRequest request) {
+    public UserResponse create(UserCreateRequest request) {
         // Business Rule: Check uniqueness before persisting
         if (userRepository.existsByUsername(request.username())) {
             throw DuplicateEntryException.forEntity("User", "username", request.username());
@@ -82,20 +98,22 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      *
      * @param id      The ID of the user to update.
      * @param request The DTO containing the update data.
-     * @return A {@code CompletableFuture} containing the {@code UserResponse} DTO of the updated user.
+     * @return The {@code UserResponse} DTO of the updated user.
      * @throws ValidationException     if the current password check fails during a password change attempt.
      * @throws DuplicateEntryException if the new username or email is already taken by another user.
+     * @throws ResourceNotFoundException if the user with the given ID is not found.
      */
     @Override
     @Transactional
-    public CompletableFuture<UserResponse> update(UUID id, UserUpdateRequest request) {
-        User existingUser = repository.findById(id).orElseThrow();
+    public UserResponse update(UUID id, UserUpdateRequest request) {
+        User existingUser = repository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.forEntity("User", id)); // Added proper exception
 
         checkUniquenessOnUpdate(id, request.username(), request.email());
 
         // Business Rule: Handle optional password change
         if (request.newPassword() != null && !request.newPassword().isEmpty()) {
-            if (!passwordEncoder.matches(request.currentPassword(), existingUser.getPasswordHash())) {
+            if (request.currentPassword() == null || !passwordEncoder.matches(request.currentPassword(), existingUser.getPasswordHash())) {
                 throw new ValidationException("Current password is required and incorrect to change password.", ErrorCodes.AUTH_INVALID_CREDENTIALS);
             }
             existingUser.setPasswordHash(passwordEncoder.encode(request.newPassword()));
@@ -108,7 +126,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
 
     /**
      * Executes a dynamic search for users based on the provided filter criteria and pagination settings.
-     * Uses JPA Specifications to build the query chain.
+     * Uses JPA Specifications to build the query chain and runs **asynchronously** on a virtual thread executor.
      *
      * @param filter   The {@code UserFilter} DTO containing search criteria (keyword, role).
      * @param pageable The pagination and sorting information.
@@ -117,7 +135,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
     @Override
     @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<Page<UserResponse>> search(UserFilter filter, Pageable pageable) {
+    public Page<UserResponse> search(UserFilter filter, Pageable pageable) {
 
         // Start with an empty specification (no where clause)
         Specification<User> spec = (root, query, cb) -> null;
@@ -142,13 +160,13 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
 
         // Query execution
         Page<User> entityPage = specExecutor.findAll(spec, pageable);
-        Page<UserResponse> responsePage = entityPage.map(this::mapToResponse);
 
-        return CompletableFuture.completedFuture(responsePage);
+        return entityPage.map(this::mapToResponse);
     }
 
     /**
      * Finds a user by their unique username.
+     * This operation runs **asynchronously** on a virtual thread executor.
      * * @param username The username to search for.
      * @return A {@code CompletableFuture} containing the found {@code UserResponse} DTO.
      * @throws ResourceNotFoundException if no user with the given username is found.
@@ -156,17 +174,106 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
     @Override
     @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<UserResponse> findByUsername(String username) {
-        log.debug("Fetching User by username: {}", username);
-
+    public UserResponse findByUsername(String username) {
+        // ... (implementation code) ...
         return userRepository.findByUsername(username)
                 .map(this::mapToResponse)
-                .map(CompletableFuture::completedFuture)
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("User", username));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public UserDetailsResponse me(String accessToken) {
+        log.debug("Getting user details from access token");
+        
+        try {
+            // 1. Validate and extract user ID from token
+            UUID userId = jwtTokenProvider.getUserIdFromJWT(accessToken);
+            log.debug("Extracted user ID from token: {}", userId);
+            
+            // 2. Find user by ID
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> ResourceNotFoundException.forEntity("User", userId));
+            log.debug("Found user: {}", user.getUsername());
+            
+            // 3. Map user to UserResponse
+            UserResponse userResponse = mapToResponse(user);
+            
+            // 4. Initialize other fields
+            AccountResponse accountResponse = null;
+            String fullName = null;
+            String description = null;
+            UUID companyId = null;
+            String bizId = null;
+            
+            // 5. Check if user is an employee to get additional details
+            var employeeOpt = employeeRepository.findByUserId(userId);
+            if (employeeOpt.isPresent()) {
+                var employee = employeeOpt.get();
+                log.debug("User is an employee with code: {}", employee.getCode());
+                
+                // Get employee details
+                fullName = employee.getName();
+                bizId = employee.getCode();
+                companyId = employee.getCompany() != null ? employee.getCompany().getId() : null;
+                description = "Employee - " + (employee.getGrade() != null ? employee.getGrade().getName() : "No Grade");
+                
+                // Get account details if available
+                if (employee.getAccount() != null) {
+                    var account = employee.getAccount();
+                    accountResponse = mapToAccountResponse(account);
+                }
+            } else {
+                // User is not an employee (might be admin/employer)
+                fullName = user.getUsername();
+                description = "System User - " + user.getRole().name();
+                
+                // For admin/employer, try to get company info
+                var companies = companyRepository.findAll();
+                if (!companies.isEmpty()) {
+                    Company company = companies.getFirst(); // Default company
+                    companyId = company.getId();
+                    accountResponse = mapToAccountResponse(company.getAccount());
+                }
+            }
+            
+            log.debug("Successfully retrieved user details for: {}", user.getUsername());
+            
+            return new UserDetailsResponse(
+                    userResponse,
+                    accountResponse,
+                    fullName,
+                    description,
+                    companyId,
+                    bizId
+            );
+            
+        } catch (Exception e) {
+            log.error("Failed to get user details from token: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
 
-    // --- Abstract Mapping Implementations (Required by AbstractCrudService) ---
+    private static AccountResponse mapToAccountResponse(Account account) {
+        return new AccountResponse(
+                account.getId(),
+                account.getOwnerType(),
+                account.getOwnerId(),
+                account.getAccountType(),
+                account.getAccountName(),
+                account.getAccountNumber(),
+                account.getCurrentBalance(),
+                account.getOverdraftLimit(),
+                account.getBranch() != null ? account.getBranch().getId() : null,
+                account.getBranch() != null ? account.getBranch().getBranchName() : null,
+                account.getStatus(),
+                account.getCreatedAt(),
+                account.getCreatedBy()
+        );
+    }
+
+
+    // --- Abstract Mapping Implementations (No changes needed) ---
 
     /**
      * Maps a {@code UserCreationRequest} DTO to a new {@code User} entity.
@@ -177,6 +284,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      */
     @Override
     protected User mapToEntity(UserCreateRequest creationRequest) {
+        // ... (implementation code) ...
         return User.builder()
                 .username(creationRequest.username())
                 .email(creationRequest.email())
@@ -195,6 +303,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      */
     @Override
     protected User mapToEntity(UserUpdateRequest updateRequest, User entity) {
+        // ... (implementation code) ...
         entity.setUsername(updateRequest.username());
         entity.setEmail(updateRequest.email());
         if (updateRequest.role() != null) {
@@ -211,6 +320,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      */
     @Override
     protected UserResponse mapToResponse(User entity) {
+        // ... (implementation code) ...
         return new UserResponse(
                 entity.getId(),
                 entity.getUsername(),
@@ -232,6 +342,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      * @throws DuplicateEntryException if the username or email is already in use by a different user.
      */
     private void checkUniquenessOnUpdate(UUID currentId, String newUsername, String newEmail) {
+        // ... (implementation code) ...
         // 1. Check Username
         userRepository.findByUsername(newUsername).ifPresent(user -> {
             if (!user.getId().equals(currentId)) {

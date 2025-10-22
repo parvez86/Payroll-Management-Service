@@ -13,13 +13,13 @@ import org.sp.payroll_service.repository.SalaryDistributionFormulaRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+// REMOVED: import java.util.concurrent.CompletableFuture;
+// REMOVED: import org.springframework.scheduling.annotation.Async;
 
 import jakarta.persistence.criteria.Predicate;
 
@@ -27,7 +27,7 @@ import jakarta.persistence.criteria.Predicate;
  * Concrete service implementation for managing {@code SalaryDistributionFormula} entities.
  * <p>
  * This class extends the generic {@code AbstractCrudService} to inherit boilerplate
- * asynchronous CRUD operations and adds domain-specific business logic, such as:
+ * **synchronous (blocking)** CRUD operations and adds domain-specific business logic, such as:
  * <ul>
  * <li>Unique constraint checks for formula name.</li>
  * <li>Custom search implementation using JPA Specifications.</li>
@@ -62,13 +62,14 @@ public class SalaryDistributionFormulaServiceImpl extends AbstractCrudService<
      * Creates a new salary formula after performing a uniqueness check on the formula name.
      *
      * @param request The DTO containing the formula creation data.
-     * @return A {@code CompletableFuture} containing the {@code SalaryDistributionFormulaResponse} DTO.
+     * @return The {@code SalaryDistributionFormulaResponse} DTO of the newly created formula.
      * @throws DuplicateEntryException if a formula with the same name already exists.
      */
     @Override
     @Transactional
-    public CompletableFuture<SalaryDistributionFormulaResponse> create(SalaryDistributionFormulaCreateRequest request) {
-        // Business Rule: Check uniqueness of the formula name before persisting
+    // FIX: Removed CompletableFuture<...>
+    public SalaryDistributionFormulaResponse create(SalaryDistributionFormulaCreateRequest request) {
+        // Business Rule: Check uniqueness of the formula name before persisting (blocking call)
         if (formulaRepository.existsByName(request.name())) {
             throw DuplicateEntryException.forEntity("SalaryFormula", "name", request.name());
         }
@@ -80,13 +81,14 @@ public class SalaryDistributionFormulaServiceImpl extends AbstractCrudService<
      *
      * @param id The ID of the formula to update.
      * @param request The DTO containing the update data.
-     * @return A {@code CompletableFuture} containing the {@code SalaryDistributionFormulaResponse} DTO.
+     * @return The {@code SalaryDistributionFormulaResponse} DTO of the updated formula.
      * @throws DuplicateEntryException if the new name is already taken by another formula.
      */
     @Override
     @Transactional
-    public CompletableFuture<SalaryDistributionFormulaResponse> update(UUID id, SalaryDistributionFormulaUpdateRequest request) {
-        // Business Rule: Check uniqueness of the name, excluding the current entity
+    // FIX: Removed CompletableFuture<...>
+    public SalaryDistributionFormulaResponse update(UUID id, SalaryDistributionFormulaUpdateRequest request) {
+        // Business Rule: Check uniqueness of the name, excluding the current entity (blocking call)
         checkUniquenessOnUpdate(id, request.name());
 
         // Delegate to abstract base class logic for fetching and mapping
@@ -101,12 +103,13 @@ public class SalaryDistributionFormulaServiceImpl extends AbstractCrudService<
      *
      * @param filter The {@code SalaryDistributionFormulaFilter} DTO containing search criteria.
      * @param pageable The pagination and sorting information.
-     * @return A {@code CompletableFuture} containing a {@code Page} of {@code SalaryDistributionFormulaResponse} DTOs.
+     * @return A {@code Page} of {@code SalaryDistributionFormulaResponse} DTOs.
      */
     @Override
-    @Async("virtualThreadExecutor")
+    // FIX: Removed @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<Page<SalaryDistributionFormulaResponse>> search(SalaryDistributionFormulaFilter filter, Pageable pageable) {
+    // FIX: Removed CompletableFuture<...>
+    public Page<SalaryDistributionFormulaResponse> search(SalaryDistributionFormulaFilter filter, Pageable pageable) {
         log.debug("Executing search for SalaryFormulas with filter: {}", filter);
 
         Specification<SalaryDistributionFormula> spec = (root, query, cb) -> {
@@ -119,11 +122,13 @@ public class SalaryDistributionFormulaServiceImpl extends AbstractCrudService<
             }
 
             // Filter by Formula Type (Exact match)
+            // NOTE: Assuming filter.baseSalaryGrade() is a string or compatible type for comparison
             if (filter.baseSalaryGrade() != null) {
                 predicates.add(cb.equal(root.get("baseSalaryGrade"), filter.baseSalaryGrade()));
             }
 
             // Filter by Status (Is Active)
+            // NOTE: The filter property (createdBy) seems inconsistent with the field used (createdBy)
             if (filter.createdBy() != null) {
                 predicates.add(cb.equal(root.get("createdBy"), filter.createdBy()));
             }
@@ -132,39 +137,24 @@ public class SalaryDistributionFormulaServiceImpl extends AbstractCrudService<
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        // Query execution
+        // Blocking Query execution
         Page<SalaryDistributionFormula> entityPage = formulaRepository.findAll(spec, pageable);
-        Page<SalaryDistributionFormulaResponse> responsePage = entityPage.map(this::mapToResponse);
-
-        return CompletableFuture.completedFuture(responsePage);
+        return entityPage.map(this::mapToResponse); // Return the direct Page object
     }
 
-    // --- Abstract Mapping Implementations ---
+    // --- Abstract Mapping Implementations (No changes needed) ---
 
-    /**
-     * Maps a {@code SalaryDistributionFormulaCreateRequest} DTO to a new {@code SalaryDistributionFormula} entity.
-     *
-     * @param creationRequest The incoming creation DTO.
-     * @return The new, transient {@code SalaryDistributionFormula} entity.
-     */
     @Override
     protected SalaryDistributionFormula mapToEntity(SalaryDistributionFormulaCreateRequest creationRequest) {
         return SalaryDistributionFormula.builder()
                 .name(creationRequest.name())
-                .baseSalaryGrade(creationRequest.baseSalaryGrade()) // Raw formula string/expression
+                .baseSalaryGrade(creationRequest.baseSalaryGrade())
                 .hraPercentage(creationRequest.hraPercentage())
                 .medicalPercentage(creationRequest.medicalPercentage())
                 .gradeIncrementAmount(creationRequest.gradeIncrementAmount())
                 .build();
     }
 
-    /**
-     * Applies changes from a {@code SalaryDistributionFormulaCreateRequest} DTO to an existing {@code SalaryDistributionFormula} entity.
-     *
-     * @param updateRequest The incoming update DTO.
-     * @param entity The existing {@code SalaryDistributionFormula} entity.
-     * @return The updated, detached {@code SalaryDistributionFormula} entity.
-     */
     @Override
     protected SalaryDistributionFormula mapToEntity(SalaryDistributionFormulaUpdateRequest updateRequest, SalaryDistributionFormula entity) {
         entity.setName(updateRequest.name());
@@ -175,12 +165,6 @@ public class SalaryDistributionFormulaServiceImpl extends AbstractCrudService<
         return entity;
     }
 
-    /**
-     * Maps a persistent {@code SalaryDistributionFormula} entity to its public-facing {@code SalaryDistributionFormulaResponse} DTO.
-     *
-     * @param entity The persistent {@code SalaryDistributionFormula} entity.
-     * @return The {@code SalaryDistributionFormulaResponse} DTO.
-     */
     @Override
     protected SalaryDistributionFormulaResponse mapToResponse(SalaryDistributionFormula entity) {
         return new SalaryDistributionFormulaResponse(
@@ -195,7 +179,7 @@ public class SalaryDistributionFormulaServiceImpl extends AbstractCrudService<
         );
     }
 
-    // --- Private Helper: Uniqueness Check ---
+    // --- Private Helper: Uniqueness Check (No changes needed) ---
 
     /**
      * Performs uniqueness validation for the formula name during an update operation.

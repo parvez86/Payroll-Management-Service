@@ -7,12 +7,14 @@ import org.sp.payroll_service.api.payroll.dto.EmployeeUpdateRequest;
 import org.sp.payroll_service.domain.common.service.BaseCrudService;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Interface defining the contract for Employee management operations.
  * It extends the generic CrudService, binding it to the specific
  * DTOs and ID type of the Employee domain.
+ * 
+ * NOTE: All methods are synchronous to maintain security context.
+ * Virtual thread performance is achieved at the controller level.
  */
 public interface EmployeeService extends BaseCrudService<
         UUID,               // ID
@@ -27,17 +29,17 @@ public interface EmployeeService extends BaseCrudService<
      * @param bizId employee business ID
      * @return employee response
      */
-    CompletableFuture<EmployeeResponse> findByBizId(String bizId);
+    EmployeeResponse findByBizId(String bizId);
     
     /**
      * Get employee count grouped by grade.
      * @return employee count statistics by grade
      */
-    CompletableFuture<Object> getEmployeeCountByGrade();
+    Object getEmployeeCountByGrade();
     
     /**
      * Get total number of employees.
      * @return total employee count
      */
-    CompletableFuture<Long> getTotalEmployeeCount();
+    Long getTotalEmployeeCount();
 }

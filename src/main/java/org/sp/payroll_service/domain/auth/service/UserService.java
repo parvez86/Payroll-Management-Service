@@ -1,16 +1,10 @@
 package org.sp.payroll_service.domain.auth.service;
 
 import jakarta.validation.constraints.NotBlank;
-import org.sp.payroll_service.api.auth.dto.UserCreateRequest;
-import org.sp.payroll_service.api.auth.dto.UserFilter;
-import org.sp.payroll_service.api.auth.dto.UserResponse;
-import org.sp.payroll_service.api.auth.dto.UserUpdateRequest;
-import org.sp.payroll_service.domain.common.service.AbstractCrudService;
+import org.sp.payroll_service.api.auth.dto.*;
 import org.sp.payroll_service.domain.common.service.BaseCrudService;
-import org.springframework.scheduling.annotation.Async;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Interface defining the contract for User management operations.
@@ -25,11 +19,18 @@ public interface UserService extends BaseCrudService<
         UserFilter          // F (Filter DTO)
         > {
     /**
-     * Find a user by username.
+     * Find a user by token.
      *
      * @param username the username to search for
-     * @return a CompletableFuture containing the UserResponse, or null if not found
+     * @return a UserResponse, or null if not found
      */
-    @Async("virtualThreadExecutor")
-    CompletableFuture<UserResponse> findByUsername(@NotBlank String username);
+    UserResponse findByUsername(@NotBlank String username);
+
+    /**
+     * Find a user by token.
+     *
+     * @param accessToken the accessToken of the user
+     * @return a UserResponse, or null if not found
+     */
+    UserDetailsResponse me (@NotBlank String accessToken);
 }

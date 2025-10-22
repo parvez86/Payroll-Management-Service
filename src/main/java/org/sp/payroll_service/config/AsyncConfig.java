@@ -2,15 +2,18 @@ package org.sp.payroll_service.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.security.task.DelegatingSecurityContextAsyncTaskExecutor;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 @Configuration
+@EnableAsync
 public class AsyncConfig {
 
-    @Bean("virtualThreadExecutor")
-    public Executor virtualThreadExecutor() {
+    @Bean("virtualThreadTaskExecutor")
+    public Executor virtualThreadTaskExecutor() {
         return Executors.newVirtualThreadPerTaskExecutor();
     }
 }

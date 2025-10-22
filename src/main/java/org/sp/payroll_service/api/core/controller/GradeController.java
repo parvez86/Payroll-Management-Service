@@ -20,11 +20,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * REST Controller for managing the hierarchical Grade entity (e.g., organizational structure).
  * Only ADMINs and EMPLOYERs should manage Grades.
+ * This is a **synchronous** controller implementation.
  */
 @Tag(name = "Grade Management", description = "CRUD and Search operations for the hierarchical Grade/Rank structure.")
 @RestController
@@ -38,63 +38,57 @@ public class GradeController {
     @Operation(summary = "Create a new Grade, optionally linking it to a parent Grade (for hierarchy).")
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public CompletableFuture<ResponseEntity<GradeResponse>> createGrade(
+    public ResponseEntity<GradeResponse> createGrade(
             @Valid @RequestBody GradeCreateRequest request) {
         log.info("Request to create new grade: {}", request.name());
-        return gradeService.create(request)
-                .thenApply(response -> ResponseEntity.status(HttpStatus.CREATED).body(response));
+        GradeResponse response = gradeService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Operation(summary = "Get a Grade by its unique ID.")
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public CompletableFuture<ResponseEntity<GradeResponse>> getGradeById(
+    public ResponseEntity<GradeResponse> getGradeById(
             @PathVariable UUID id) {
         log.debug("Request to fetch grade with ID: {}", id);
-        return gradeService.findById(id)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(gradeService.findById(id));
     }
 
     @Operation(summary = "Update an existing Grade (name or parent link).")
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public CompletableFuture<ResponseEntity<GradeResponse>> updateGrade(
+    public ResponseEntity<GradeResponse> updateGrade(
             @PathVariable UUID id,
             @Valid @RequestBody GradeUpdateRequest request) {
         log.info("Request to update grade with ID: {}", id);
-        return gradeService.update(id, request)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(gradeService.update(id, request));
     }
 
     @Operation(summary = "Delete a Grade/Rank.")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
-    public CompletableFuture<ResponseEntity<Void>> deleteGrade(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteGrade(@PathVariable UUID id) {
         log.warn("Request to delete grade with ID: {}", id);
-        return gradeService.delete(id)
-                .thenApply(v -> ResponseEntity.noContent().build());
+        gradeService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Search and paginate Grades using various filters (keyword, parentId, minRank).")
     @GetMapping("/search")
     @PreAuthorize("isAuthenticated()")
-    public CompletableFuture<ResponseEntity<Page<GradeResponse>>> searchGrades(
-            // Uses @ModelAttribute to bind URL query parameters to the GradeFilter DTO
-            @ModelAttribute GradeFilter filter, 
+    public ResponseEntity<Page<GradeResponse>> searchGrades(
+            @ModelAttribute GradeFilter filter,
             @PageableDefault(sort = {"rank", "name"}) Pageable pageable) {
         log.debug("Request to search grades with filters: {}", filter);
-        return gradeService.search(filter, pageable)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(gradeService.search(filter, pageable));
     }
-    
+
     @Operation(summary = "Get all Grades (non-paginated list, typically for dropdowns).")
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public CompletableFuture<ResponseEntity<List<GradeResponse>>> getAllGrades() {
+    public ResponseEntity<List<GradeResponse>> getAllGrades() {
         log.debug("Request to fetch all grades.");
-        // Assuming findAll returns all entities mapped to a List<ResponseDTO>
-        return gradeService.findAll() 
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(gradeService.findAll());
     }
 }

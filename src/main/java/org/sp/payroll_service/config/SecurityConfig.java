@@ -17,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 /**
  * ✅ CLEAN SECURITY CONFIGURATION
@@ -35,14 +36,17 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint authEntryPoint;
     private final JwtAccessDeniedHandler accessDeniedHandler;
     private final AuthenticationFilter authenticationFilter;
+    private final CorsConfigurationSource corsConfigurationSource;
 
     public SecurityConfig(
             JwtAuthenticationEntryPoint authEntryPoint,
             JwtAccessDeniedHandler accessDeniedHandler,
-            AuthenticationFilter authenticationFilter) {
+            AuthenticationFilter authenticationFilter,
+            CorsConfigurationSource corsConfigurationSource) {
         this.authEntryPoint = authEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
         this.authenticationFilter = authenticationFilter;
+        this.corsConfigurationSource = corsConfigurationSource;
     }
 
     /**
@@ -51,6 +55,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
+                // ✅ Enable CORS with custom configuration
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth

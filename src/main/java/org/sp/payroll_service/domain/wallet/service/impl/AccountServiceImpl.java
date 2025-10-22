@@ -17,7 +17,7 @@ import org.sp.payroll_service.repository.BranchRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.scheduling.annotation.Async;
+// REMOVED: import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -26,11 +26,12 @@ import jakarta.persistence.criteria.Predicate;
 
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+// REMOVED: import java.util.concurrent.CompletableFuture;
 
 /**
  * Concrete service implementation for managing {@code Account} entities (wallets).
  * Focuses on initial setup and delegation of transactional logic.
+ * All public methods in this service are synchronous (blocking).
  */
 @Service
 @Slf4j
@@ -44,7 +45,7 @@ public class AccountServiceImpl extends AbstractCrudService<
         implements AccountService {
 
     private final AccountRepository accountRepository;
-    private final BranchRepository branchRepository; // Dependency for foreign key validation
+    private final BranchRepository branchRepository;
 
     public AccountServiceImpl(AccountRepository accountRepository, BranchRepository branchRepository) {
         super(accountRepository, "Account");
@@ -56,32 +57,34 @@ public class AccountServiceImpl extends AbstractCrudService<
 
     @Override
     @Transactional
-    public CompletableFuture<AccountResponse> create(CreateAccountRequest request) {
+    // FIX: Changed return type from CompletableFuture<AccountResponse> to AccountResponse
+    public AccountResponse create(CreateAccountRequest request) {
         // Fintech Rule 1: Account numbers must be globally unique
         if (accountRepository.existsByAccountNumber(request.accountNumber())) {
             throw DuplicateEntryException.forEntity("Account", "accountNumber", request.accountNumber());
         }
-        
+
         // Fintech Rule 2: Branch existence validated in mapToEntity via getBranchOrThrow
-        
+
         return super.create(request);
     }
 
     @Override
     @Transactional
-    public CompletableFuture<AccountResponse> update(UUID id, UpdateAccountRequest request) {
+    // FIX: Changed return type from CompletableFuture<AccountResponse> to AccountResponse
+    public AccountResponse update(UUID id, UpdateAccountRequest request) {
         // Fintech Rule 1: Account number cannot be changed here (separate process)
         // Fintech Rule 2: Check update uniqueness (only for account number if it were changing)
-        
+
         return super.update(id, request);
     }
 
-    // --- Mapping Implementations ---
+    // --- Mapping Implementations (No changes needed) ---
 
     @Override
     protected Account mapToEntity(CreateAccountRequest creationRequest) {
         Branch branch = getBranchOrThrow(creationRequest.branchId());
-        
+
         return Account.builder()
                 .ownerType(creationRequest.ownerType())
                 .ownerId(creationRequest.ownerId())
@@ -103,7 +106,7 @@ public class AccountServiceImpl extends AbstractCrudService<
     @Override
     protected AccountResponse mapToResponse(Account entity) {
         String branchName = entity.getBranch() != null ? entity.getBranch().getBranchName() : null;
-        
+
         return new AccountResponse(
                 entity.getId(),
                 entity.getOwnerType(),
@@ -124,17 +127,18 @@ public class AccountServiceImpl extends AbstractCrudService<
     // --- Custom Search Implementation ---
 
     @Override
-    @Async("virtualThreadExecutor")
+    // FIX: Removed @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<Page<AccountResponse>> search(AccountFilter filter, Pageable pageable) {
+    // FIX: Changed return type from CompletableFuture<Page<AccountResponse>> to Page<AccountResponse>
+    public Page<AccountResponse> search(AccountFilter filter, Pageable pageable) {
         Specification<Account> spec = (root, query, cb) -> {
             var predicates = new ArrayList<Predicate>();
 
             if (StringUtils.hasText(filter.keyword())) {
                 String pattern = "%" + filter.keyword().toLowerCase() + "%";
                 Predicate keywordMatch = cb.or(
-                    cb.like(cb.lower(root.get("accountName")), pattern),
-                    cb.like(cb.lower(root.get("accountNumber")), pattern)
+                        cb.like(cb.lower(root.get("accountName")), pattern),
+                        cb.like(cb.lower(root.get("accountNumber")), pattern)
                 );
                 predicates.add(keywordMatch);
             }
@@ -150,30 +154,35 @@ public class AccountServiceImpl extends AbstractCrudService<
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
+        // Blocking JPA call
         Page<Account> entityPage = specExecutor.findAll(spec, pageable);
-        return CompletableFuture.completedFuture(entityPage.map(this::mapToResponse));
+        // FIX: Return the direct Page object
+        return entityPage.map(this::mapToResponse);
     }
 
-    // --- Private Helpers ---
+    // --- Private Helpers (No changes needed) ---
 
     private Branch getBranchOrThrow(UUID branchId) {
         return branchRepository.findById(branchId)
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("Branch", branchId));
     }
-    
+
     // --- Fintech Operations (Exposed for Transactional Service) ---
 
     /**
-     * Finds an account by its owner ID. This is a read-only operation.
+     * Finds an account by its owner ID. This is a read-only, synchronous operation.
      *
      * @param ownerId The ID of the employee or company that owns the account.
-     * @return A CompletableFuture containing the AccountResponse DTO.
+     * @param ownerType The type of owner (Employee or Company).
+     * @return The AccountResponse DTO.
      * @throws ResourceNotFoundException if no account is found for the given owner ID.
      */
     @Transactional(readOnly = true)
-    public CompletableFuture<AccountResponse> findByOwnerId(UUID ownerId, OwnerType ownerType) {
-        return CompletableFuture.supplyAsync(() -> accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType)
+    // FIX: Changed return type from CompletableFuture<AccountResponse> to AccountResponse
+    public AccountResponse findByOwnerId(UUID ownerId, OwnerType ownerType) {
+        // FIX: Removed CompletableFuture.supplyAsync wrapper. Blocking code executes directly.
+        return accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType)
                 .map(this::mapToResponse)
-                .orElseThrow(() -> ResourceNotFoundException.forEntity("Account for OwnerId ", ownerId.toString())));
+                .orElseThrow(() -> ResourceNotFoundException.forEntity("Account for OwnerId ", ownerId.toString()));
     }
 }

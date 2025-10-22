@@ -1,6 +1,9 @@
 package org.sp.payroll_service.api.payroll.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,13 +22,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * REST Controller for managing {@code SalaryDistributionFormula} entities.
  * <p>
- * All methods are asynchronous, leveraging {@code CompletableFuture} to ensure
- * non-blocking execution and efficient resource utilization.
+ * This is a **synchronous** controller implementation, calling the service directly.
  */
 @Tag(name = "Salary Distribution Formula Management", description = "CRUD and search operations for salary distribution formulas.")
 @RestController
@@ -40,32 +41,41 @@ public class SalaryDistributionFormulaController {
      * Creates a new salary distribution formula.
      *
      * @param request The DTO containing the formula data.
-     * @return A {@code CompletableFuture} containing the newly created formula response with HTTP 201 Created.
+     * @return The newly created formula response with HTTP 201 Created.
      */
     @Operation(summary = "Create a new salary formula")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Formula created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public CompletableFuture<ResponseEntity<SalaryDistributionFormulaResponse>> createFormula(
+    public ResponseEntity<SalaryDistributionFormulaResponse> createFormula(
             @Valid @RequestBody SalaryDistributionFormulaCreateRequest request) {
         log.info("Request to create new salary formula: {}", request.name());
-        return formulaService.create(request)
-                .thenApply(response -> ResponseEntity.status(HttpStatus.CREATED).body(response));
+        SalaryDistributionFormulaResponse response = formulaService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**
      * Retrieves a salary distribution formula by its ID.
      *
      * @param id The ID of the formula to retrieve.
-     * @return A {@code CompletableFuture} containing the formula response with HTTP 200 OK.
+     * @return The formula response with HTTP 200 OK.
      */
     @Operation(summary = "Get a salary formula by ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Formula found"),
+            @ApiResponse(responseCode = "404", description = "Formula not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public CompletableFuture<ResponseEntity<SalaryDistributionFormulaResponse>> getFormulaById(
-            @PathVariable UUID id) {
+    public ResponseEntity<SalaryDistributionFormulaResponse> getFormulaById(
+            @Parameter(description = "Formula ID") @PathVariable UUID id) {
         log.debug("Request to fetch formula with ID: {}", id);
-        return formulaService.findById(id)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(formulaService.findById(id));
     }
 
     /**
@@ -73,33 +83,43 @@ public class SalaryDistributionFormulaController {
      *
      * @param id The ID of the formula to update.
      * @param request The DTO containing the updated formula data.
-     * @return A {@code CompletableFuture} containing the updated formula response with HTTP 200 OK.
+     * @return The updated formula response with HTTP 200 OK.
      */
     @Operation(summary = "Update an existing salary formula")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Formula updated successfully"),
+            @ApiResponse(responseCode = "404", description = "Formula not found"),
+            @ApiResponse(responseCode = "400", description = "Invalid request data"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public CompletableFuture<ResponseEntity<SalaryDistributionFormulaResponse>> updateFormula(
-            @PathVariable UUID id,
+    public ResponseEntity<SalaryDistributionFormulaResponse> updateFormula(
+            @Parameter(description = "Formula ID") @PathVariable UUID id,
             @Valid @RequestBody SalaryDistributionFormulaUpdateRequest request) {
         log.info("Request to update formula with ID: {}", id);
-        return formulaService.update(id, request)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(formulaService.update(id, request));
     }
 
     /**
      * Deletes a salary distribution formula by its ID.
      *
      * @param id The ID of the formula to delete.
-     * @return A {@code CompletableFuture} with HTTP 204 No Content.
+     * @return {@code ResponseEntity<Void>} with HTTP 204 No Content.
      */
     @Operation(summary = "Delete a salary formula by ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Formula deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Formula not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAnyRole('ADMIN')")
-    public CompletableFuture<ResponseEntity<Void>> deleteFormula(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteFormula(@Parameter(description = "Formula ID") @PathVariable UUID id) {
         log.warn("Request to delete formula with ID: {}", id);
-        return formulaService.delete(id)
-                .thenApply(v -> ResponseEntity.noContent().build());
+        formulaService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 
     /**
@@ -107,16 +127,19 @@ public class SalaryDistributionFormulaController {
      *
      * @param filter The DTO containing the search filters.
      * @param pageable The pagination and sorting information (default size 20).
-     * @return A {@code CompletableFuture} containing a paginated result of formula responses with HTTP 200 OK.
+     * @return A paginated result of formula responses with HTTP 200 OK.
      */
     @Operation(summary = "Search salary formulas using dynamic filters and pagination")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Formulas retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public CompletableFuture<ResponseEntity<Page<SalaryDistributionFormulaResponse>>> searchFormulas(
-            @ModelAttribute SalaryDistributionFormulaFilter filter,
+    public ResponseEntity<Page<SalaryDistributionFormulaResponse>> searchFormulas(
+            @Parameter(description = "Filter criteria") @ModelAttribute SalaryDistributionFormulaFilter filter,
             @PageableDefault(size = 20) Pageable pageable) {
         log.debug("Request to search formulas with filters: {} and pageable: {}", filter, pageable);
-        return formulaService.search(filter, pageable)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(formulaService.search(filter, pageable));
     }
 }

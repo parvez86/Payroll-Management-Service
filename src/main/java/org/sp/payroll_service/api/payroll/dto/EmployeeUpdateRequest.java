@@ -1,11 +1,10 @@
 package org.sp.payroll_service.api.payroll.dto;
 
+import jakarta.validation.constraints.*;
 import org.sp.payroll_service.domain.core.entity.Grade;
 import org.sp.payroll_service.domain.common.enums.EmploymentStatus;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -19,7 +18,7 @@ import java.util.UUID;
  * </p>
  *
  * @param phoneNumber The employee's updated contact phone number. Must match the standard US phone pattern if provided.
- * @param grade The updated payroll grade level (e.g., Grade.G5).
+ * @param gradeId The updated payroll grade level (e.g., Grade.G5).
  * @param status The updated employment transactionStatus (e.g., EmploymentStatus.TERMINATED).
  * @param jobTitle The employee's new job title or designation. Must be less than 50 characters if provided.
  * @param bankAccountNumber The updated primary bank account number for payroll disbursement. Must be less than 50 characters if provided.
@@ -30,12 +29,14 @@ public record EmployeeUpdateRequest(
     @Email
     String email,
 
+    @NotBlank @Size(min = 6) String password,
+
     // Example of enforcing validity using a regex pattern
     @Pattern(regexp = "^(\\([0-9]{3}\\)|[0-9]{3})[-.\\s]?[0-9]{3}[-.\\s]?[0-9]{4}$", message = "Phone number format is invalid.")
     String phoneNumber,
 
     // Employment Details
-    Grade grade,
+    UUID gradeId,
 
     @Size(max = 50)
     String jobTitle,
@@ -47,5 +48,26 @@ public record EmployeeUpdateRequest(
     @Size(max = 50)
     String bankRoutingNumber,
 
-    EmploymentStatus status
+    EmploymentStatus status,
+
+    @NotBlank(message = "Name is required.")
+    @Size(max = 100)
+    String name,
+
+    @Size(max = 255, message = "Address cannot exceed 255 characters.")
+    String address,
+
+    @Pattern(regexp = "\\+?[0-9]{10,15}", message = "Invalid mobile number format.")
+    String mobile,
+
+    @NotBlank(message = "Account name (Holder name) is required.")
+    @Size(max = 100, message = "Account name must be less than 100 characters.")
+    String accountName,
+
+    @NotNull(message = "Overdraft limit is required.")
+    @DecimalMin(value = "0.00", inclusive = true, message = "Overdraft limit cannot be negative.")
+    BigDecimal overdraftLimit,
+
+    @NotNull(message = "Branch ID is required for bank branch linkage.")
+    UUID branchId
 ) {}

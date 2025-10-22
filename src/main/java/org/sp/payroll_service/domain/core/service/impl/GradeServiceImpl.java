@@ -14,7 +14,6 @@ import org.sp.payroll_service.repository.GradeRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -22,7 +21,8 @@ import org.springframework.util.StringUtils;
 import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+
+
 
 /**
  * Concrete service implementation for managing {@code Grade} entities, including hierarchy.
@@ -49,8 +49,9 @@ public class GradeServiceImpl extends AbstractCrudService<
 
     @Override
     @Transactional
-    public CompletableFuture<GradeResponse> create(GradeCreateRequest request) {
-        // Business Rule 1: Check uniqueness of name
+    // FIX: Changed return type from CompletableFuture<GradeResponse> to GradeResponse
+    public GradeResponse create(GradeCreateRequest request) {
+        // Business Rule 1: Check uniqueness of name (blocking call)
         if (gradeRepository.existsByName(request.name())) {
             throw DuplicateEntryException.forEntity("Grade", "name", request.name());
         }
@@ -61,8 +62,9 @@ public class GradeServiceImpl extends AbstractCrudService<
 
     @Override
     @Transactional
-    public CompletableFuture<GradeResponse> update(UUID id, GradeUpdateRequest request) {
-        // Business Rule 1: Check uniqueness of name (excluding current entity)
+    // FIX: Changed return type from CompletableFuture<GradeResponse> to GradeResponse
+    public GradeResponse update(UUID id, GradeUpdateRequest request) {
+        // Business Rule 1: Check uniqueness of name (excluding current entity) (blocking call)
         if (gradeRepository.existsByNameAndIdNot(request.name(), id)) {
             throw DuplicateEntryException.forEntity("Grade", "name", request.name());
         }
@@ -71,9 +73,10 @@ public class GradeServiceImpl extends AbstractCrudService<
 
     // --- Custom Search Implementation ---
     @Override
-    @Async("virtualThreadExecutor")
+    // FIX: Removed @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<Page<GradeResponse>> search(GradeFilter filter, Pageable pageable) {
+    // FIX: Changed return type from CompletableFuture<Page<GradeResponse>> to Page<GradeResponse>
+    public Page<GradeResponse> search(GradeFilter filter, Pageable pageable) {
         Specification<Grade> spec = (root, query, cb) -> {
             var predicates = new ArrayList<Predicate>();
 
@@ -95,14 +98,17 @@ public class GradeServiceImpl extends AbstractCrudService<
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
+        // Blocking JPA call
         Page<Grade> entityPage = specExecutor.findAll(spec, pageable);
-        return CompletableFuture.completedFuture(entityPage.map(this::mapToResponse));
+        // Return the direct Page object
+        return entityPage.map(this::mapToResponse);
     }
 
-    // --- Abstract Mapping Implementations ---
+    // --- Abstract Mapping Implementations (No changes needed) ---
 
     @Override
     protected Grade mapToEntity(GradeCreateRequest creationRequest) {
+        // NOTE: getParentOrNull contains a blocking JPA call, which is fine in this synchronous service method.
         Grade parent = getParentOrNull(creationRequest.parentId());
 
         // --- NEW LOGIC: Derive rank if parent exists, otherwise use DTO rank ---
@@ -153,7 +159,7 @@ public class GradeServiceImpl extends AbstractCrudService<
         );
     }
 
-    // --- Private Helpers ---
+    // --- Private Helpers (No changes needed) ---
 
     /**
      * Retrieves the Parent Grade entity by ID, or throws ResourceNotFoundException if not found.

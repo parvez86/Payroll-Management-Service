@@ -38,7 +38,13 @@ curl -X POST "http://localhost:20001/pms/api/v1/auth/register" \
   }'
 ```
 
-### 1.2 Refresh Token
+### 1.3 Get Current User Details
+```bash
+curl -X GET "http://localhost:20001/pms/api/v1/auth/me" \
+  -H "Authorization: Bearer $JWT_TOKEN"
+```
+
+### 1.4 Refresh Token
 ```bash
 curl -X POST "http://localhost:20001/pms/api/v1/auth/refresh" \
   -H "Content-Type: application/json" \
@@ -47,7 +53,7 @@ curl -X POST "http://localhost:20001/pms/api/v1/auth/refresh" \
   }'
 ```
 
-### 1.3 Logout
+### 1.5 Logout
 ```bash
 curl -X POST "http://localhost:20001/pms/api/v1/auth/logout" \
   -H "Content-Type: application/json" \
@@ -144,18 +150,61 @@ curl -X POST "http://localhost:20001/pms/api/v1/employees" \
   -d '{
     "bizId": "1001",
     "name": "Ahmed Rahman",
-    "mobile": "01711123456",
     "address": "Gulshan-2, Dhaka",
-    "gradeId": "GRADE_UUID",
-    "companyId": "COMPANY_UUID",
-    "userId": "USER_UUID",
-    "accountDetails": {
-      "accountName": "Ahmed Rahman",
-      "accountNumber": "EMP001",
-      "accountType": "SAVINGS",
-      "branchId": "BRANCH_UUID"
-    }
+    "mobile": "+8801711123456",
+    "gradeId": "GRADE_UUID_HERE",
+    "username": "ahmed.rahman",
+    "email": "ahmed.rahman@company.com",
+    "password": "password123",
+    "accountName": "Ahmed Rahman",
+    "accountNumber": "1234567890123456",
+    "overdraftLimit": 5000.00,
+    "branchId": "BRANCH_UUID_HERE"
   }'
+```
+
+**Required Fields:**
+- `bizId`: 4-digit business identifier (e.g., "1001")
+- `name`: Employee full name
+- `gradeId`: Reference to employee grade/level
+- `username`: Login username (3-50 characters)
+- `email`: Valid email address
+- `password`: Password (minimum 6 characters)
+- `accountName`: Bank account holder name
+- `accountNumber`: Bank account number (10-38 characters)
+- `overdraftLimit`: Account overdraft limit (≥ 0.00)
+- `branchId`: Reference to bank branch
+
+**Optional Fields:**
+- `address`: Residential address
+- `mobile`: Contact number (+country code format)
+
+**Expected Response (201 Created):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "code": "1001",
+  "name": "Ahmed Rahman",
+  "address": "Gulshan-2, Dhaka",
+  "mobile": "+8801711123456",
+  "company": {
+    "id": "company-uuid",
+    "name": "TechCorp Bangladesh Ltd"
+  },
+  "grade": {
+    "id": "grade-uuid",
+    "name": "Grade 3",
+    "rank": 3
+  },
+  "account": {
+    "id": "account-uuid",
+    "accountNumber": "1234567890123456",
+    "accountName": "Ahmed Rahman",
+    "currentBalance": 0.00,
+    "accountType": "SAVINGS"
+  },
+  "status": "ACTIVE"
+}
 ```
 
 ### 3.2 Get All Employees
@@ -188,11 +237,73 @@ curl -X PUT "http://localhost:20001/pms/api/v1/employees/{employeeId}" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -d '{
-    "name": "Updated Name",
-    "mobile": "01711999999",
-    "address": "Updated Address",
-    "gradeId": "NEW_GRADE_UUID"
+    "name": "Updated Ahmed Rahman",
+    "address": "Banani, Dhaka",
+    "mobile": "+8801711999999",
+    "phoneNumber": "(555) 123-4567",
+    "gradeId": "NEW_GRADE_UUID_HERE",
+    "email": "updated.email@company.com",
+    "password": "newpassword123",
+    "jobTitle": "Senior Developer",
+    "accountName": "Updated Account Name",
+    "bankAccountNumber": "9876543210987654",
+    "bankRoutingNumber": "ROUTING123",
+    "overdraftLimit": 10000.00,
+    "branchId": "NEW_BRANCH_UUID_HERE",
+    "status": "ACTIVE"
   }'
+```
+
+**All fields are optional for updates. Include only the fields you want to change:**
+
+**Personal Information:**
+- `name`: Employee full name
+- `address`: Residential address  
+- `mobile`: Contact number (+country code format)
+- `phoneNumber`: Alternative phone (US format)
+
+**Employment Details:**
+- `gradeId`: Reference to new employee grade/level
+- `jobTitle`: Job title or designation (max 50 chars)
+- `status`: Employment status (ACTIVE, INACTIVE, TERMINATED)
+
+**Authentication:**
+- `email`: Valid email address
+- `password`: New password (minimum 6 characters)
+
+**Banking Information:**
+- `accountName`: Bank account holder name
+- `bankAccountNumber`: New bank account number (max 50 chars)
+- `bankRoutingNumber`: Bank routing/Swift code (max 50 chars)
+- `overdraftLimit`: Account overdraft limit (≥ 0.00)
+- `branchId`: Reference to new bank branch
+
+**Expected Response (200 OK):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "code": "1001",
+  "name": "Updated Ahmed Rahman",
+  "address": "Banani, Dhaka",
+  "mobile": "+8801711999999",
+  "company": {
+    "id": "company-uuid",
+    "name": "TechCorp Bangladesh Ltd"
+  },
+  "grade": {
+    "id": "new-grade-uuid",
+    "name": "Grade 4",
+    "rank": 4
+  },
+  "account": {
+    "id": "account-uuid",
+    "accountNumber": "9876543210987654",
+    "accountName": "Updated Account Name",
+    "currentBalance": 25000.00,
+    "accountType": "SAVINGS"
+  },
+  "status": "ACTIVE"
+}
 ```
 
 ### 3.7 Delete Employee
@@ -615,7 +726,33 @@ curl -X POST "http://localhost:20001/pms/api/v1/auth/login" \
 # 2. Set JWT token
 export JWT_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
-# 3. Check system health
+# 3. Get current user details
+curl -X GET "http://localhost:20001/pms/api/v1/auth/me" \
+  -H "Authorization: Bearer $JWT_TOKEN"
+
+# Expected response format:
+# {
+#   "user": {
+#     "id": "550e8400-e29b-41d4-a716-446655440000",
+#     "username": "admin",
+#     "email": "admin@company.com", 
+#     "role": "ADMIN",
+#     "createdAt": "2025-01-01T00:00:00.000Z"
+#   },
+#   "account": {
+#     "id": "account-uuid",
+#     "accountNumber": "EMP001",
+#     "accountName": "Admin Account",
+#     "currentBalance": 50000.00,
+#     "accountType": "SAVINGS"
+#   },
+#   "fullName": "System Administrator",
+#   "description": "System User - ADMIN",
+#   "companyId": "company-uuid",
+#   "bizId": "1001"
+# }
+
+# 4. Check system health
 curl -X GET "http://localhost:20001/pms/health"
 ```
 
@@ -638,6 +775,31 @@ FORMULA_ID=$(curl -X POST "http://localhost:20001/pms/api/v1/salary-formulas" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $JWT_TOKEN" \
   -d '{"name": "Test Formula", "baseSalaryGrade": 6, "hraPercentage": 0.20, "medicalPercentage": 0.15, "gradeIncrementAmount": 5000.00}' | jq -r '.id')
+
+# 4. Create grade
+GRADE_ID=$(curl -X POST "http://localhost:20001/pms/api/v1/grades" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"name": "Grade 3", "rank": 3, "description": "Mid-level position"}' | jq -r '.id')
+
+# 5. Create employee
+EMPLOYEE_ID=$(curl -X POST "http://localhost:20001/pms/api/v1/employees" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -d "{
+    \"bizId\": \"1001\",
+    \"name\": \"Test Employee\",
+    \"address\": \"Test Address, Dhaka\",
+    \"mobile\": \"+8801711123456\",
+    \"gradeId\": \"$GRADE_ID\",
+    \"username\": \"test.employee\",
+    \"email\": \"test.employee@company.com\",
+    \"password\": \"password123\",
+    \"accountName\": \"Test Employee\",
+    \"accountNumber\": \"1234567890123456\",
+    \"overdraftLimit\": 5000.00,
+    \"branchId\": \"$BRANCH_ID\"
+  }" | jq -r '.id')
 ```
 
 ### 3. Run Payroll Process
@@ -679,6 +841,55 @@ curl -X POST "http://localhost:20001/pms/api/v1/payroll/batches/$BATCH_ID/proces
   "status": 401,
   "error": "Unauthorized",
   "message": "Invalid or expired token",
+  "path": "/api/v1/employees"
+}
+```
+
+### Duplicate Employee ID Error
+```json
+{
+  "timestamp": "2025-01-20T10:30:00.000Z",
+  "status": 409,
+  "error": "Conflict",
+  "message": "Employee with business ID '1001' already exists",
+  "path": "/api/v1/employees"
+}
+```
+
+### Validation Error (Create Employee)
+```json
+{
+  "timestamp": "2025-01-20T10:30:00.000Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Validation failed",
+  "details": {
+    "bizId": "Business ID must be 4 digits",
+    "email": "Email format is invalid",
+    "accountNumber": "Account number length is invalid"
+  },
+  "path": "/api/v1/employees"
+}
+```
+
+### Grade Not Found Error
+```json
+{
+  "timestamp": "2025-01-20T10:30:00.000Z",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Grade not found with ID: grade-uuid",
+  "path": "/api/v1/employees"
+}
+```
+
+### Account Number Conflict Error
+```json
+{
+  "timestamp": "2025-01-20T10:30:00.000Z",
+  "status": 409,
+  "error": "Conflict",
+  "message": "Account number '1234567890123456' already exists",
   "path": "/api/v1/employees"
 }
 ```

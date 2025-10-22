@@ -54,83 +54,72 @@ public abstract class AbstractCrudService<
     // --- BASE CRUD IMPLEMENTATIONS (Transactional & Asynchronous) ---
 
     @Override
-    @Async("virtualThreadExecutor")
     @Transactional
-    public CompletableFuture<R> create(C request) {
+    public R create(C request) {
         E entity = mapToEntity(request);
         E savedEntity = repository.save(entity);
-        return CompletableFuture.completedFuture(mapToResponse(savedEntity));
+        return mapToResponse(savedEntity);
     }
 
     @Override
-    @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<R> findById(ID id) {
-        return CompletableFuture.completedFuture(
-                repository.findById(id)
-                        .map(this::mapToResponse)
-                        .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, entityName + " not found with ID: " + id))
-        );
+    public R findById(ID id) {
+        return repository.findById(id)
+                .map(this::mapToResponse)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, entityName + " not found with ID: " + id));
     }
 
     @Override
-    @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<List<R>> findAll() {
-        return CompletableFuture.completedFuture(
-                repository.findAll().stream()
-                        .map(this::mapToResponse)
-                        .toList()
-        );
+    public List<R> findAll() {
+        return repository.findAll().stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     @Override
-    @Async("virtualThreadExecutor")
     @Transactional
-    public CompletableFuture<R> update(ID id, U request) {
-        return CompletableFuture.supplyAsync(() -> {
-            E entity = repository.findById(id)
-                    .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, entityName + " not found with ID: " + id));
+    public R update(ID id, U request) {
+        E entity = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, entityName + " not found with ID: " + id));
 
-            E updatedEntity = mapToEntity(request, entity);
-            E savedEntity = repository.save(updatedEntity);
-            return mapToResponse(savedEntity);
-        }, CompletableFuture.delayedExecutor(0, java.util.concurrent.TimeUnit.MILLISECONDS)); // Using supplyAsync with custom executor
-
+        E updatedEntity = mapToEntity(request, entity);
+        E savedEntity = repository.save(updatedEntity);
+        return mapToResponse(savedEntity);
     }
 
     @Override
-    @Async("virtualThreadExecutor")
     @Transactional
-    public CompletableFuture<Void> delete(ID id) {
-        return CompletableFuture.runAsync(() -> {
-            if (!repository.existsById(id)) {
-                throw new ResponseStatusException(NOT_FOUND, entityName + " not found with ID: " + id);
-            }
-            repository.deleteById(id);
-        }, CompletableFuture.delayedExecutor(0, java.util.concurrent.TimeUnit.MILLISECONDS));
+    public void delete(ID id) {
+        if (!repository.existsById(id)) {
+            throw new ResponseStatusException(NOT_FOUND, entityName + " not found with ID: " + id);
+        }
+        repository.deleteById(id);
     }
 
     // --- ADVANCED QUERY IMPLEMENTATIONS ---
 
     @Override
-    @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<Page<R>> findPageAll(Pageable pageable) {
+    public Page<R> findPageAll(Pageable pageable) {
         Page<E> entityPage = repository.findAll(pageable);
-        return CompletableFuture.completedFuture(entityPage.map(this::mapToResponse));
+        return entityPage.map(this::mapToResponse);
     }
 
     /**
-     * The search method MUST be implemented in the concrete service class (e.g., CompanyServiceImpl).
-     * This method requires domain-specific logic to build the JPA Specification.
-     * We provide a default implementation that throws an error, forcing the subclass to implement it.
+     * The search method MUST be implemented in the concrete service class.
+     * We provide a default implementation that executes the search synchronously
+     * if the filter is a JPA Specification, otherwise it throws UnsupportedOperationException.
+     *
+     * @param filter Must be castable to Specification<E> in the implementation.
      */
-    @Override
-    @Async("virtualThreadExecutor")
-    @Transactional(readOnly = true)
-    public CompletableFuture<Page<R>> search(F filter, Pageable pageable) {
-        // Concrete service classes must override this method.
-        return CompletableFuture.failedFuture(new UnsupportedOperationException("Search operation is not implemented for " + entityName + " with the given filter."));
+    @SuppressWarnings("unchecked")
+    public Page<R> search(F filter, Pageable pageable) {
+        if (filter instanceof Specification) {
+            Page<E> entityPage = specExecutor.findAll((Specification<E>) filter, pageable);
+            return entityPage.map(this::mapToResponse);
+        } else {
+            throw new UnsupportedOperationException("Search operation must be implemented in the concrete service for " + entityName + ".");
+        }
     }
 }

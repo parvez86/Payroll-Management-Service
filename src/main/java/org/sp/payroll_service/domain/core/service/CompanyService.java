@@ -8,7 +8,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Interface defining the contract for Company management operations.
@@ -29,14 +28,14 @@ public interface CompanyService extends BaseCrudService<
      * @param request top-up request details
      * @return updated company response
      */
-    CompletableFuture<CompanyResponse> topUpAccount(UUID companyId, CompanyTopUpRequest request);
+    CompanyResponse topUpAccount(UUID companyId, CompanyTopUpRequest request);
     
     /**
      * Get company account details.
      * @param companyId company identifier
      * @return account response with balance details
      */
-    CompletableFuture<AccountResponse> getCompanyAccount(UUID companyId);
+    AccountResponse getCompanyAccount(UUID companyId);
     
     /**
      * Get company transaction history.
@@ -44,5 +43,5 @@ public interface CompanyService extends BaseCrudService<
      * @param pageable pagination parameters
      * @return paginated list of transactions
      */
-    CompletableFuture<Page<TransactionResponse>> getCompanyTransactions(UUID companyId, Pageable pageable);
+    Page<TransactionResponse> getCompanyTransactions(UUID companyId, Pageable pageable);
 }

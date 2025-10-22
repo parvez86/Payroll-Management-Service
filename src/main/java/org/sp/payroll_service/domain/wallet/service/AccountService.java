@@ -27,7 +27,7 @@ public interface AccountService extends BaseCrudService<
     /**
      * Finds an account by the ID of its owner (Employee or Company).
      * @param ownerId The UUID of the owner.
-     * @return CompletableFuture resolving to the AccountResponse.
+     * @return resolving to the AccountResponse.
      */
-    CompletableFuture<AccountResponse> findByOwnerId(UUID ownerId, OwnerType ownerType);
+    AccountResponse findByOwnerId(UUID ownerId, OwnerType ownerType);
 }

@@ -8,21 +8,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sp.payroll_service.api.auth.dto.AuthResponse;
-import org.sp.payroll_service.api.auth.dto.LogoutRequest;
-import org.sp.payroll_service.api.auth.dto.RefreshTokenRequest;
-import org.sp.payroll_service.api.auth.dto.UserCreateRequest;
-import org.sp.payroll_service.api.auth.dto.LoginRequest;
-import org.sp.payroll_service.api.auth.dto.UserResponse;
+import org.sp.payroll_service.api.auth.dto.*;
 import org.sp.payroll_service.domain.auth.service.AuthenticationService;
+import org.sp.payroll_service.domain.auth.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import static org.sp.payroll_service.domain.auth.HeaderUtils.getClientIpAddress;
 
 /**
  * REST controller for authentication operations.
@@ -36,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
     
     private final AuthenticationService authService;
+    private final UserService userService;
     
     /**
      * Authenticates user and returns JWT token.
@@ -118,6 +114,7 @@ public class AuthController {
         @ApiResponse(responseCode = "401", description = "Invalid refresh token"),
         @ApiResponse(responseCode = "400", description = "Invalid request format")
     })
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequest request) {
         log.info("Logout request received");
         
@@ -156,21 +153,30 @@ public class AuthController {
             throw e;
         }
     }
-    
+
     /**
-     * Helper method to extract client IP address from request
+     * Get current user details from JWT token.
+     * @param token JWT access token from Authorization header
+     * @return current user's detailed information
      */
-    private String getClientIpAddress(HttpServletRequest request) {
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0].trim();
+    @GetMapping("/me")
+    @Operation(summary = "Get Current User Details", description = "Retrieve current user's profile information from JWT token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User details retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Invalid or expired token"),
+            @ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<UserDetailsResponse> me(
+            @RequestHeader("authorization") String token) {
+        log.info("Get current user details API called");
+        try {
+            UserDetailsResponse response = userService.me(token);
+            log.info("User details retrieved successfully");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Failed to get user details: {}", e.getMessage());
+            throw e;
         }
-        
-        String xRealIP = request.getHeader("X-Real-IP");
-        if (xRealIP != null && !xRealIP.isEmpty()) {
-            return xRealIP;
-        }
-        
-        return request.getRemoteAddr();
     }
 }

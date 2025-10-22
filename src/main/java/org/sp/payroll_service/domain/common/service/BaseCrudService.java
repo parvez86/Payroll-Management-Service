@@ -4,11 +4,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable; // Added for Pageable parameter
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Generic interface for basic CRUD and advanced search/pagination operations on entities.
- * All methods return CompletableFuture to support asynchronous, non-blocking execution (Virtual Threads).
+ * All methods are synchronous to maintain Spring Security context.
+ * Virtual thread performance is achieved at the controller level through manual execution.
  *
  * @param <ID> The type of the entity's identifier (usually UUID or Long).
  * @param <R> The Response DTO type returned to the client.
@@ -19,27 +19,27 @@ import java.util.concurrent.CompletableFuture;
 public interface BaseCrudService<ID, R, C, U, F> {
 
     // Basic CRUD Operations
-    CompletableFuture<R> create(C request);
-    CompletableFuture<R> findById(ID id);
-    CompletableFuture<List<R>> findAll();
-    CompletableFuture<R> update(ID id, U request);
-    CompletableFuture<Void> delete(ID id);
+    R create(C request);
+    R findById(ID id);
+    List<R> findAll();
+    R update(ID id, U request);
+    void delete(ID id);
 
     // Advanced Query Operations
 
     /**
      * Retrieves a page of all resources, supporting standard pagination.
      * @param pageable The Spring Data Pageable object defining page number, size, and sorting.
-     * @return A CompletableFuture containing a Page of Response DTOs.
+     * @return A Page of Response DTOs.
      */
-    CompletableFuture<Page<R>> findPageAll(Pageable pageable);
+    Page<R> findPageAll(Pageable pageable);
 
     /**
      * Executes a custom, optimal search query based on complex criteria.
      *
      * @param filter The Filter DTO containing search criteria (e.g., transactionStatus, date range, keywords).
      * @param pageable The Spring Data Pageable object for pagination and sorting of results.
-     * @return A CompletableFuture containing a Page of Response DTOs matching the filter.
+     * @return A Page of Response DTOs matching the filter.
      */
-    CompletableFuture<Page<R>> search(F filter, Pageable pageable);
+    Page<R> search(F filter, Pageable pageable);
 }

@@ -23,14 +23,14 @@ public interface TransactionService {
      * @param request transfer details
      * @return transaction result
      */
-    CompletableFuture<TransactionResponse> executeTransfer(TransferRequest request);
+    TransactionResponse executeTransfer(TransferRequest request);
     
     /**
      * Gets current balance for an account.
      * @param accountId account identifier
      * @return current balance
      */
-    CompletableFuture<Money> getAccountBalance(UUID accountId);
+    Money getAccountBalance(UUID accountId);
     
     /**
      * Retrieves transaction history with optional filtering.
@@ -38,14 +38,14 @@ public interface TransactionService {
      * @param pageable pagination parameters
      * @return paginated transactions
      */
-    CompletableFuture<Page<TransactionResponse>> getTransactionHistory(TransactionFilter filter, Pageable pageable);
+    Page<TransactionResponse> getTransactionHistory(TransactionFilter filter, Pageable pageable);
     
     /**
      * Retrieves a specific transaction by ID.
      * @param transactionId transaction identifier
      * @return transaction details
      */
-    CompletableFuture<TransactionResponse> getTransactionById(UUID transactionId);
+    TransactionResponse getTransactionById(UUID transactionId);
     
     /**
      * Retrieves all transactions for a specific account.
@@ -53,14 +53,14 @@ public interface TransactionService {
      * @param pageable pagination parameters
      * @return paginated transactions for the account
      */
-    CompletableFuture<Page<TransactionResponse>> getAccountTransactions(UUID accountId, Pageable pageable);
+    Page<TransactionResponse> getAccountTransactions(UUID accountId, Pageable pageable);
     
     /**
      * Retrieves all transactions for a specific payroll batch.
      * @param batchId payroll batch identifier
      * @return list of transactions for the batch
      */
-    CompletableFuture<List<TransactionResponse>> getBatchTransactions(UUID batchId);
+    List<TransactionResponse> getBatchTransactions(UUID batchId);
     
     /**
      * Validates if an account has sufficient balance for a transfer.
@@ -68,7 +68,7 @@ public interface TransactionService {
      * @param amount amount to check
      * @return true if sufficient balance exists
      */
-    CompletableFuture<Boolean> hasSufficientBalance(UUID accountId, Money amount);
+    Boolean hasSufficientBalance(UUID accountId, Money amount);
     
     /**
      * Reverses a transaction (if supported).
@@ -76,5 +76,5 @@ public interface TransactionService {
      * @param reason reason for reversal
      * @return reversal transaction
      */
-    CompletableFuture<TransactionResponse> reverseTransaction(UUID transactionId, String reason);
+    TransactionResponse reverseTransaction(UUID transactionId, String reason);
 }

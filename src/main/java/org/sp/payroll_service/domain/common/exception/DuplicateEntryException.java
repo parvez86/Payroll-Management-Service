@@ -18,7 +18,7 @@ public class DuplicateEntryException extends BusinessException {
 
     public static DuplicateEntryException forEntity(String entityName, String field, Object identifier) {
         return new DuplicateEntryException(
-                String.format("%s not found with field:%s identifier: %s", entityName, field, identifier)
+                String.format("%s found with field:%s identifier: %s", entityName, field, identifier)
         );
     }
 }

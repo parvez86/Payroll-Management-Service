@@ -19,7 +19,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * REST Controller for managing {@code Bank} entities.
@@ -36,35 +35,33 @@ public class BankController {
     // --- CREATE ---
     @Operation(summary = "Create a new bank entry")
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')") // Only Admins should configure new banks
-    public CompletableFuture<ResponseEntity<BankResponse>> createBank(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BankResponse> createBank(
             @Valid @RequestBody BankCreateRequest request) {
         log.info("Request to create new bank: {}", request.name());
-        return bankService.create(request)
-                .thenApply(response -> ResponseEntity.status(HttpStatus.CREATED).body(response));
+        BankResponse response = bankService.create(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     // --- READ BY ID ---
     @Operation(summary = "Get a bank by ID")
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public CompletableFuture<ResponseEntity<BankResponse>> getBankById(
+    public ResponseEntity<BankResponse> getBankById(
             @PathVariable UUID id) {
         log.debug("Request to fetch bank with ID: {}", id);
-        return bankService.findById(id)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(bankService.findById(id));
     }
 
     // --- UPDATE ---
     @Operation(summary = "Update an existing bank")
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')") // Only Admins should modify bank config
-    public CompletableFuture<ResponseEntity<BankResponse>> updateBank(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BankResponse> updateBank(
             @PathVariable UUID id,
             @Valid @RequestBody BankUpdateRequest request) {
         log.info("Request to update bank with ID: {}", id);
-        return bankService.update(id, request)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(bankService.update(id, request));
     }
 
     // --- DELETE ---
@@ -72,21 +69,20 @@ public class BankController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
-    public CompletableFuture<ResponseEntity<Void>> deleteBank(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteBank(@PathVariable UUID id) {
         log.warn("Request to delete bank with ID: {}", id);
-        return bankService.delete(id)
-                .thenApply(v -> ResponseEntity.noContent().build());
+        bankService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 
     // --- SEARCH ---
     @Operation(summary = "Search banks using dynamic filters and pagination")
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public CompletableFuture<ResponseEntity<Page<BankResponse>>> searchBanks(
+    public ResponseEntity<Page<BankResponse>> searchBanks(
             @ModelAttribute BankFilter filter,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
         log.debug("Request to search banks with filters: {}", filter);
-        return bankService.search(filter, pageable)
-                .thenApply(ResponseEntity::ok);
+        return ResponseEntity.ok(bankService.search(filter, pageable));
     }
 }

@@ -139,7 +139,7 @@ public class JwtTokenProvider {
     public UUID getUserIdFromJWT(String token) {
         Claims claims = getClaims(token);
         String subject = claims.getSubject();
-        
+        log.info("subject: {}", subject);
         try {
             return UUID.fromString(subject);
         } catch (IllegalArgumentException e) {
@@ -156,17 +156,19 @@ public class JwtTokenProvider {
      */
     public boolean validateToken(String authToken) {
         try {
-            getClaims(authToken);
+            Claims claims = getClaims(authToken);
             return true;
         } catch (ExpiredJwtException ex) {
-            log.warn("Expired JWT token: {}", authToken);
+            log.error("🔍 [JWT-VALIDATION-DEBUG] ❌ EXPIRED JWT TOKEN: {}", ex.getMessage());
             throw new InvalidTokenException("Expired");
         } catch (UnsupportedJwtException ex) {
-            log.error("Unsupported JWT token: {}", ex.getMessage());
+            log.error("🔍 [JWT-VALIDATION-DEBUG] ❌ UNSUPPORTED JWT TOKEN: {}", ex.getMessage());
             throw new InvalidTokenException("Unsupported format");
         } catch (MalformedJwtException ex) {
-            log.error("Invalid JWT token: {}", ex.getMessage());
+            log.error("🔍 [JWT-VALIDATION-DEBUG] ❌ MALFORMED JWT TOKEN: {}", ex.getMessage());
             throw new InvalidTokenException("Malformed");
+        } catch (Exception ex) {
+            throw new InvalidTokenException("Validation failure during claims extraction", ex);
         }
     }
 
@@ -215,13 +217,37 @@ public class JwtTokenProvider {
      * Safely retrieves the claims from the JWT, handling all parsing exceptions.
      */
     private Claims getClaims(String token) {
+        log.error("🔍 [JWT-CLAIMS-DEBUG] === GET CLAIMS START ===");
+        log.error("🔍 [JWT-CLAIMS-DEBUG] Secret key algorithm: {}", key != null ? key.getAlgorithm() : "null");
+
+        if (token == null) {
+            log.error("🔍 [JWT-CLAIMS-DEBUG] ❌ Token is null");
+            throw new InvalidTokenException("Token is null");
+        }
+
+        // Defensive cleaning: trim, remove Bearer prefix and any internal whitespace/newlines
+        String cleaned = token.trim();
+        if (cleaned.toLowerCase().startsWith("bearer ")) {
+            cleaned = cleaned.substring(7);
+        }
+        // Collapse/remove any whitespace characters that might have been introduced by transport/logging
+        cleaned = cleaned.replaceAll("\\s+", "");
+
+        log.error("🔍 [JWT-CLAIMS-DEBUG] Cleaned token first 50 chars: {}", cleaned != null ? cleaned.substring(0, Math.min(50, cleaned.length())) : "null");
+
         try {
-            return Jwts.parser()
+            // Use the parser with verifyWith to parse the compact JWS and get Claims
+            Claims claims = Jwts.parser()
                     .verifyWith(key)
                     .build()
-                    .parseSignedClaims(token)
+                    .parseSignedClaims(cleaned)
                     .getPayload();
+
+            log.error("🔍 [JWT-CLAIMS-DEBUG] ✅ CLAIMS EXTRACTED SUCCESSFULLY");
+            return claims;
         } catch (JwtException | IllegalArgumentException ex) {
+            log.error("🔍 [JWT-CLAIMS-DEBUG] ❌ CLAIMS EXTRACTION FAILED: {} - {}", ex.getClass().getSimpleName(), ex.getMessage());
+            log.error("🔍 [JWT-CLAIMS-DEBUG] ❌ EXCEPTION DETAILS:", ex);
             // Re-throw as a business-specific exception
             throw new InvalidTokenException("Validation failure during claims extraction", ex);
         }

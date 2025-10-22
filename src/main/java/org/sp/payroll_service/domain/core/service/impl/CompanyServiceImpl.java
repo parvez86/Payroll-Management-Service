@@ -25,7 +25,7 @@ import org.sp.payroll_service.repository.TransactionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.scheduling.annotation.Async;
+// REMOVED: import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -34,11 +34,12 @@ import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+// REMOVED: import java.util.concurrent.CompletableFuture;
 
 /**
  * Concrete service implementation for managing {@code Company} entities.
  * Handles cascading creation of the Company's main payroll {@code Account} and links to {@code SalaryDistributionFormula}.
+ * All public methods in this service are synchronous (blocking).
  */
 @Service
 @Slf4j
@@ -54,7 +55,7 @@ public class CompanyServiceImpl extends AbstractCrudService<
     private final CompanyRepository companyRepository;
     private final AccountRepository accountRepository;
     private final BranchRepository branchRepository;
-    private final SalaryDistributionFormulaRepository formulaRepository; // CORRECTED: Injected repository
+    private final SalaryDistributionFormulaRepository formulaRepository;
     private final TransactionRepository transactionRepository;
 
     public CompanyServiceImpl(CompanyRepository companyRepository,
@@ -70,11 +71,12 @@ public class CompanyServiceImpl extends AbstractCrudService<
         this.transactionRepository = transactionRepository;
     }
 
-    // --- CORE CRUD IMPLEMENTATIONS (No changes needed here, relies on mapToEntity) ---
+    // --- CORE CRUD IMPLEMENTATIONS ---
 
     @Override
     @Transactional
-    public CompletableFuture<CompanyResponse> create(CompanyCreateRequest request) {
+    // FIX: Changed return type from CompletableFuture<CompanyResponse> to CompanyResponse
+    public CompanyResponse create(CompanyCreateRequest request) {
         // Business Rule: Company name must be unique
         if (companyRepository.existsByName(request.name())) {
             throw DuplicateEntryException.forEntity("Company", "name", request.name());
@@ -84,7 +86,7 @@ public class CompanyServiceImpl extends AbstractCrudService<
         return super.create(request);
     }
 
-    // --- MAPPING LOGIC ---
+    // --- MAPPING LOGIC (No changes needed) ---
 
     @Override
     protected Company mapToEntity(CompanyCreateRequest creationRequest) {
@@ -95,14 +97,12 @@ public class CompanyServiceImpl extends AbstractCrudService<
         Company company = Company.builder()
                 .name(creationRequest.name())
                 .description(creationRequest.description())
-                .salaryFormula(formula) // CORRECTED: Set Formula
+                .salaryFormula(formula)
                 .build();
 
-        // 3. Create and set the Main Account entity (OwnerId will be set after Company is saved,
-        //    or via Hibernate's persistence context if cascade is used).
+        // 3. Create and set the Main Account entity (ID is transient until company save)
         Account mainAccount = createMainAccountEntity(creationRequest.mainAccountRequest(), company.getId());
 
-        // CORRECTED: Link the account to the company for cascading save.
         company.setAccount(mainAccount);
 
         return company;
@@ -118,12 +118,10 @@ public class CompanyServiceImpl extends AbstractCrudService<
             entity.setName(updateRequest.name());
         }
 
-        // CORRECTED: Apply partial update for description
         if (updateRequest.description() != null) {
             entity.setDescription(updateRequest.description());
         }
 
-        // CORRECTED: Apply update for Salary Formula
         if (updateRequest.salaryFormulaId() != null) {
             SalaryDistributionFormula formula = getFormulaOrThrow(updateRequest.salaryFormulaId());
             entity.setSalaryFormula(formula);
@@ -134,8 +132,6 @@ public class CompanyServiceImpl extends AbstractCrudService<
 
     @Override
     protected CompanyResponse mapToResponse(Company entity) {
-        // CORRECTED: Use the direct @OneToOne relationship (entity.getMainAccount())
-        // to avoid an extra DB query (assuming Company entity is correctly mapped).
         AccountResponse accountResponse = mapAccountToResponse(entity.getAccount());
 
         return new CompanyResponse(
@@ -149,14 +145,8 @@ public class CompanyServiceImpl extends AbstractCrudService<
         );
     }
 
-    // --- Helper Methods ---
+    // --- Helper Methods (No changes needed) ---
 
-    /**
-     * Retrieves the SalaryDistributionFormula entity by ID, or throws a ResourceNotFoundException.
-     * @param formulaId The UUID of the SalaryDistributionFormula.
-     * @return The Formula entity.
-     * @throws ResourceNotFoundException if the formula is not found.
-     */
     private SalaryDistributionFormula getFormulaOrThrow(UUID formulaId) {
         return formulaRepository.findById(formulaId)
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("SalaryDistributionFormula", formulaId));
@@ -165,7 +155,6 @@ public class CompanyServiceImpl extends AbstractCrudService<
 
     private AccountResponse mapAccountToResponse(Account account) {
         if (account == null) return null;
-        // CORRECTED: Safely access branch name
         String branchName = account.getBranch() != null ? account.getBranch().getBranchName() : null;
 
         return new AccountResponse(
@@ -208,9 +197,10 @@ public class CompanyServiceImpl extends AbstractCrudService<
     // --- Custom Search Implementation ---
 
     @Override
-    @Async("virtualThreadExecutor")
+    // FIX: Removed @Async("virtualThreadExecutor")
     @Transactional(readOnly = true)
-    public CompletableFuture<Page<CompanyResponse>> search(CompanyFilter filter, Pageable pageable) {
+    // FIX: Changed return type from CompletableFuture<Page<CompanyResponse>> to Page<CompanyResponse>
+    public Page<CompanyResponse> search(CompanyFilter filter, Pageable pageable) {
         Specification<Company> spec = (root, query, cb) -> {
             var predicates = new ArrayList<Predicate>();
 
@@ -218,14 +208,13 @@ public class CompanyServiceImpl extends AbstractCrudService<
                 String pattern = "%" + filter.keyword().toLowerCase() + "%";
                 Predicate nameMatch = cb.like(cb.lower(root.get("name")), pattern);
                 Predicate descriptionMatch = cb.like(cb.lower(root.get("description")), pattern);
-                predicates.add(cb.or(nameMatch, descriptionMatch)); // Search across name OR description
+                predicates.add(cb.or(nameMatch, descriptionMatch));
             }
 
             if (filter.salaryFormulaId() != null) {
                 predicates.add(cb.equal(root.get("salaryFormula").get("id"), filter.salaryFormulaId()));
             }
 
-            // Assuming BaseEntity has an 'transactionStatus' field
             if (filter.status() != null) {
                 predicates.add(cb.equal(root.get("transactionStatus"), filter.status()));
             }
@@ -233,114 +222,119 @@ public class CompanyServiceImpl extends AbstractCrudService<
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
+        // Blocking JPA call
         Page<Company> entityPage = specExecutor.findAll(spec, pageable);
-        return CompletableFuture.completedFuture(entityPage.map(this::mapToResponse));
+        return entityPage.map(this::mapToResponse);
     }
 
     @Override
     @Transactional
-    public CompletableFuture<CompanyResponse> topUpAccount(UUID companyId, CompanyTopUpRequest request) {
-        return CompletableFuture.supplyAsync(() -> {
-            // 1. Find the company
-            Company company = companyRepository.findById(companyId)
-                    .orElseThrow(() -> ResourceNotFoundException.forEntity("Company", companyId));
+    // FIX: Changed return type from CompletableFuture<CompanyResponse> to CompanyResponse
+    public CompanyResponse topUpAccount(UUID companyId, CompanyTopUpRequest request) {
+        // FIX: Removed CompletableFuture.supplyAsync wrapper. Blocking code executes directly.
 
-            // 2. Get the company's main account
-            Account companyAccount = company.getAccount();
-            if (companyAccount == null) {
-                throw new IllegalStateException("Company does not have a main account");
-            }
+        // 1. Find the company
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> ResourceNotFoundException.forEntity("Company", companyId));
 
-            // 3. Add funds to the account (simple balance update for top-up)
-            BigDecimal currentBalance = companyAccount.getCurrentBalance();
-            BigDecimal newBalance = currentBalance.add(request.amount());
-            companyAccount.setCurrentBalance(newBalance);
+        // 2. Get the company's main account
+        Account companyAccount = company.getAccount();
+        if (companyAccount == null) {
+            throw new IllegalStateException("Company does not have a main account");
+        }
 
-            // 4. Save the updated account
-            accountRepository.save(companyAccount);
+        // 3. Add funds to the account
+        BigDecimal currentBalance = companyAccount.getCurrentBalance();
+        BigDecimal newBalance = currentBalance.add(request.amount());
+        companyAccount.setCurrentBalance(newBalance);
 
-            // 5. Log the top-up operation
-            log.info("Company {} account topped up with {}. Previous balance: {}, New balance: {}", 
-                    company.getName(), request.amount(), currentBalance, newBalance);
+        // 4. Save the updated account
+        accountRepository.save(companyAccount);
 
-            // 6. Return updated company response
-            return mapToResponse(company);
-        });
+        // 5. Log the top-up operation
+        log.info("Company {} account topped up with {}. Previous balance: {}, New balance: {}",
+                company.getName(), request.amount(), currentBalance, newBalance);
+
+        // 6. Return updated company response
+        return mapToResponse(company);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public CompletableFuture<AccountResponse> getCompanyAccount(UUID companyId) {
-        return CompletableFuture.supplyAsync(() -> {
-            // 1. Find the company
-            Company company = companyRepository.findById(companyId)
-                    .orElseThrow(() -> ResourceNotFoundException.forEntity("Company", companyId));
+    // FIX: Changed return type from CompletableFuture<AccountResponse> to AccountResponse
+    public AccountResponse getCompanyAccount(UUID companyId) {
+        // FIX: Removed CompletableFuture.supplyAsync wrapper. Blocking code executes directly.
 
-            // 2. Get the company's main account
-            Account companyAccount = company.getAccount();
-            if (companyAccount == null) {
-                throw new IllegalStateException("Company does not have a main account");
-            }
+        // 1. Find the company
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> ResourceNotFoundException.forEntity("Company", companyId));
 
-            // 3. Map to AccountResponse
-            return AccountResponse.builder()
-                    .id(companyAccount.getId())
-                    .accountNumber(companyAccount.getAccountNumber())
-                    .accountType(companyAccount.getAccountType())
-                    .currentBalance(companyAccount.getCurrentBalance())
-//                    .availableBalance(companyAccount.getAvailableBalance())
-                    .status(companyAccount.getStatus())
-//                    .bankId(companyAccount.getBranch() != null ? companyAccount.getBranch().getBank().getId() : null)
-                    .branchId(companyAccount.getBranch() != null ? companyAccount.getBranch().getId() : null)
-                    .build();
-        });
+        // 2. Get the company's main account
+        Account companyAccount = company.getAccount();
+        if (companyAccount == null) {
+            throw new IllegalStateException("Company does not have a main account");
+        }
+
+        // 3. Map to AccountResponse
+        return AccountResponse.builder()
+                .id(companyAccount.getId())
+                .accountNumber(companyAccount.getAccountNumber())
+                .accountType(companyAccount.getAccountType())
+                .currentBalance(companyAccount.getCurrentBalance())
+//                .availableBalance(companyAccount.getAvailableBalance())
+                .status(companyAccount.getStatus())
+//                .bankId(companyAccount.getBranch() != null ? companyAccount.getBranch().getBank().getId() : null)
+                .branchId(companyAccount.getBranch() != null ? companyAccount.getBranch().getId() : null)
+                .build();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public CompletableFuture<Page<TransactionResponse>> getCompanyTransactions(UUID companyId, Pageable pageable) {
-        return CompletableFuture.supplyAsync(() -> {
-            // 1. Find the company
-            Company company = companyRepository.findById(companyId)
-                    .orElseThrow(() -> ResourceNotFoundException.forEntity("Company", companyId));
+    // FIX: Changed return type from CompletableFuture<Page<TransactionResponse>> to Page<TransactionResponse>
+    public Page<TransactionResponse> getCompanyTransactions(UUID companyId, Pageable pageable) {
+        // FIX: Removed CompletableFuture.supplyAsync wrapper. Blocking code executes directly.
 
-            // 2. Get the company's main account
-            Account companyAccount = company.getAccount();
-            if (companyAccount == null) {
-                throw new IllegalStateException("Company does not have a main account");
-            }
+        // 1. Find the company
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> ResourceNotFoundException.forEntity("Company", companyId));
 
-            // 3. Find all transactions for this account (both from and to)
-            Specification<Transaction> spec = (root, query, cb) -> {
-                Predicate fromAccount = cb.equal(root.get("fromAccount").get("id"), companyAccount.getId());
-                Predicate toAccount = cb.equal(root.get("toAccount").get("id"), companyAccount.getId());
-                return cb.or(fromAccount, toAccount);
-            };
+        // 2. Get the company's main account
+        Account companyAccount = company.getAccount();
+        if (companyAccount == null) {
+            throw new IllegalStateException("Company does not have a main account");
+        }
 
-            Page<Transaction> transactions = transactionRepository.findAll(spec, pageable);
+        // 3. Find all transactions for this account (both from and to)
+        Specification<Transaction> spec = (root, query, cb) -> {
+            Predicate fromAccount = cb.equal(root.get("fromAccount").get("id"), companyAccount.getId());
+            Predicate toAccount = cb.equal(root.get("toAccount").get("id"), companyAccount.getId());
+            return cb.or(fromAccount, toAccount);
+        };
 
-            // 4. Map to TransactionResponse
-            return transactions.map(transaction -> TransactionResponse.builder()
-                    .id(transaction.getId())
-//                    .transactionNumber(transaction.getTransactionNumber())
-                    .amount(Money.of(transaction.getAmount()))
-                    .type(transaction.getType())
-                    .status(transaction.getStatus())
-                    .description(transaction.getDescription())
-                    .debitAccountId(transaction.getDebitAccount() != null ? transaction.getDebitAccount().getId() : null)
-                    .creditAccountId(transaction.getCreditAccount() != null ? transaction.getCreditAccount().getId() : null)
-                    .referenceId(transaction.getReferenceId())
-                    .payrollBatchId(transaction.getPayrollBatch() != null ? transaction.getPayrollBatch().getId() : null)
-                    .requestedAt(transaction.getRequestedAt())
-                    .processedAt(transaction.getProcessedAt())
-                    .auditInfo(AuditInfo.builder()
-                            .version(transaction.getVersion())
-                            .createdAt(transaction.getCreatedAt())
-                            .createdBy(transaction.getCreatedBy().toString())
-                            .lastModifiedAt(transaction.getUpdatedAt())
-                            .lastModifiedBy(transaction.getUpdatedBy().toString())
-                            .build())
-                    .build());
-        });
+        // Blocking JPA call
+        Page<Transaction> transactions = transactionRepository.findAll(spec, pageable);
+
+        // 4. Map to TransactionResponse
+        return transactions.map(transaction -> TransactionResponse.builder()
+                .id(transaction.getId())
+//                .transactionNumber(transaction.getTransactionNumber())
+                .amount(Money.of(transaction.getAmount()))
+                .type(transaction.getType())
+                .status(transaction.getStatus())
+                .description(transaction.getDescription())
+                .debitAccountId(transaction.getDebitAccount() != null ? transaction.getDebitAccount().getId() : null)
+                .creditAccountId(transaction.getCreditAccount() != null ? transaction.getCreditAccount().getId() : null)
+                .referenceId(transaction.getReferenceId())
+                .payrollBatchId(transaction.getPayrollBatch() != null ? transaction.getPayrollBatch().getId() : null)
+                .requestedAt(transaction.getRequestedAt())
+                .processedAt(transaction.getProcessedAt())
+                .auditInfo(AuditInfo.builder()
+                        .version(transaction.getVersion())
+                        .createdAt(transaction.getCreatedAt())
+                        .createdBy(transaction.getCreatedBy().toString())
+                        .lastModifiedAt(transaction.getUpdatedAt())
+                        .lastModifiedBy(transaction.getUpdatedBy().toString())
+                        .build())
+                .build());
     }
 }
