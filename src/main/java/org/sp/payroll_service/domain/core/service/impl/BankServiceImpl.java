@@ -10,15 +10,13 @@ import org.sp.payroll_service.domain.common.service.AbstractCrudService;
 import org.sp.payroll_service.domain.core.entity.Bank;
 import org.sp.payroll_service.domain.core.service.BankService;
 import org.sp.payroll_service.repository.BankRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import jakarta.persistence.criteria.Predicate;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -66,38 +64,6 @@ public class BankServiceImpl extends AbstractCrudService<
         return super.update(id, request);
     }
 
-    // --- Custom Search Implementation ---
-
-    @Override
-    // FIX: Removed @Async("virtualThreadExecutor")
-    @Transactional(readOnly = true)
-    // FIX: Changed return type from CompletableFuture<Page<BankResponse>> to Page<BankResponse>
-    public Page<BankResponse> search(BankFilter filter, Pageable pageable) {
-        Specification<Bank> spec = (root, query, cb) -> {
-            var predicates = new ArrayList<Predicate>();
-
-            if (StringUtils.hasText(filter.keyword())) {
-                String pattern = "%" + filter.keyword().toLowerCase() + "%";
-                Predicate keywordMatch = cb.or(
-                        cb.like(cb.lower(root.get("name")), pattern),
-                        cb.like(cb.lower(root.get("swiftBicCode")), pattern)
-                );
-                predicates.add(keywordMatch);
-            }
-
-            if (StringUtils.hasText(filter.countryCode())) {
-                predicates.add(cb.equal(root.get("countryCode"), filter.countryCode()));
-            }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-
-        // Blocking JPA call
-        Page<Bank> entityPage = specExecutor.findAll(spec, pageable);
-        // FIX: Return the direct Page object
-        return entityPage.map(this::mapToResponse);
-    }
-
     // --- Abstract Mapping Implementations (No changes needed) ---
 
     @Override
@@ -138,5 +104,27 @@ public class BankServiceImpl extends AbstractCrudService<
         if (bankRepository.existsBySwiftBicCodeAndIdNot(newSwiftCode, currentId)) {
             throw DuplicateEntryException.forEntity("Bank", "SWIFT Code", newSwiftCode);
         }
+    }
+
+    @Override
+    protected Specification<Bank> buildSpecificationFromFilter(BankFilter filter) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new java.util.ArrayList<>();
+
+            if (StringUtils.hasText(filter.keyword())) {
+                String pattern = "%" + filter.keyword().toLowerCase() + "%";
+                Predicate keywordMatch = cb.or(
+                        cb.like(cb.lower(root.get("name")), pattern),
+                        cb.like(cb.lower(root.get("swiftBicCode")), pattern)
+                );
+                predicates.add(keywordMatch);
+            }
+
+            if (StringUtils.hasText(filter.countryCode())) {
+                predicates.add(cb.equal(root.get("countryCode"), filter.countryCode()));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
     }
 }

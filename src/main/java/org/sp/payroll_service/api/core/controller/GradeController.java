@@ -9,8 +9,8 @@ import org.sp.payroll_service.api.core.dto.GradeCreateRequest;
 import org.sp.payroll_service.api.core.dto.GradeFilter;
 import org.sp.payroll_service.api.core.dto.GradeResponse;
 import org.sp.payroll_service.api.core.dto.GradeUpdateRequest;
+import org.sp.payroll_service.api.payroll.dto.PageResponse;
 import org.sp.payroll_service.domain.core.service.GradeService;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -77,7 +77,7 @@ public class GradeController {
     @Operation(summary = "Search and paginate Grades using various filters (keyword, parentId, minRank).")
     @GetMapping("/search")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Page<GradeResponse>> searchGrades(
+    public ResponseEntity<PageResponse<GradeResponse>> searchGrades(
             @ModelAttribute GradeFilter filter,
             @PageableDefault(sort = {"rank", "name"}) Pageable pageable) {
         log.debug("Request to search grades with filters: {}", filter);

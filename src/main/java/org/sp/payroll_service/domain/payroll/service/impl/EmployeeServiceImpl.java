@@ -1,7 +1,7 @@
 package org.sp.payroll_service.domain.payroll.service.impl;
 
+import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
-import org.sp.payroll_service.api.auth.dto.UserCreateRequest;
 import org.sp.payroll_service.api.core.dto.CompanyResponse;
 import org.sp.payroll_service.api.core.dto.GradeResponse;
 import org.sp.payroll_service.api.payroll.dto.*;
@@ -20,8 +20,6 @@ import org.sp.payroll_service.domain.payroll.entity.Employee;
 import org.sp.payroll_service.domain.payroll.service.EmployeeService;
 import org.sp.payroll_service.domain.wallet.entity.Account;
 import org.sp.payroll_service.repository.*;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,6 +28,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -210,42 +209,6 @@ public class EmployeeServiceImpl extends AbstractCrudService<
 
         // 4. Delegate to abstract base class for simple field mapping and final save
         return super.update(id, request);
-    }
-
-    // --- Custom Search Implementation ---
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<EmployeeResponse> search(EmployeeFilterRequest filter, Pageable pageable) {
-        Specification<Employee> spec = (root, query, cb) -> {
-            var predicates = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
-
-            if (StringUtils.hasText(filter.searchKeyword())) {
-                String pattern = "%" + filter.searchKeyword().toLowerCase() + "%";
-                jakarta.persistence.criteria.Predicate nameLike = cb.like(cb.lower(root.get("name")), pattern);
-                jakarta.persistence.criteria.Predicate codeLike = cb.like(cb.lower(root.get("code")), pattern);
-                predicates.add(cb.or(nameLike, codeLike));
-            }
-
-            if (filter.gradeId() != null) {
-                predicates.add(cb.equal(root.get("grade").get("id"), filter.gradeId()));
-            }
-
-            if (filter.status() != null) {
-                // Ensure correct mapping if filter.transactionStatus is EmploymentStatus and entity.transactionStatus is EntityStatus
-                predicates.add(cb.equal(root.get("transactionStatus"), filter.status()));
-            }
-
-            if (filter.companyId() != null) {
-                // NOTE: Assumes Employee entity has a relationship named 'manager' to another Employee
-                predicates.add(cb.equal(root.get("company").get("id"), filter.companyId()));
-            }
-
-            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
-        };
-
-        Page<Employee> entityPage = employeeRepository.findAll(spec, pageable);
-        return entityPage.map(this::mapToResponse);
     }
 
     // --- Abstract Mapping Implementations ---
@@ -486,5 +449,48 @@ public class EmployeeServiceImpl extends AbstractCrudService<
     public Long getTotalEmployeeCount() {
         log.debug("Getting total employee count");
         return employeeRepository.count();
+    }
+
+
+    /**
+     * Override buildSpecificationFromFilter to provide custom filtering logic.
+     * This is called by the generic search() method in AbstractCrudService.
+     * Applies industry-grade practices:
+     * - Robust filter handling (null-safe, trimmed, case-insensitive)
+     * - Complete pagination metadata preservation
+     */
+    @Override
+    protected Specification<Employee> buildSpecificationFromFilter(EmployeeFilterRequest filter) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new java.util.ArrayList<>();
+
+            if (StringUtils.hasText(filter.searchKeyword())) {
+                String pattern = "%" + filter.searchKeyword().toLowerCase() + "%";
+                jakarta.persistence.criteria.Predicate nameLike = cb.like(cb.lower(root.get("name")), pattern);
+                jakarta.persistence.criteria.Predicate codeLike = cb.like(cb.lower(root.get("code")), pattern);
+                predicates.add(cb.or(nameLike, codeLike));
+            }
+
+            if (filter.gradeId() != null) {
+                predicates.add(cb.equal(root.get("grade").get("id"), filter.gradeId()));
+            }
+
+            if (filter.status() != null) {
+                // If filter.status() maps to the same enum/type as entity.transactionStatus, this is fine.
+                predicates.add(cb.equal(root.get("transactionStatus"), filter.status()));
+            }
+
+            if (filter.companyId() != null) {
+                // Adjust path if your relationship is truly 'company'
+                predicates.add(cb.equal(root.get("company").get("id"), filter.companyId()));
+            }
+
+            // If no predicates were added, return a true/conjunction predicate (no filtering)
+            if (predicates.isEmpty()) {
+                return cb.conjunction();
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
     }
 }

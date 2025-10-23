@@ -2,7 +2,6 @@ package org.sp.payroll_service.domain.auth.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.api.auth.dto.*;
-// ... other imports ...
 import org.sp.payroll_service.api.wallet.dto.AccountResponse;
 import org.sp.payroll_service.domain.auth.entity.User;
 import org.sp.payroll_service.domain.auth.service.UserService;
@@ -13,21 +12,17 @@ import org.sp.payroll_service.domain.common.exception.ValidationException;
 import org.sp.payroll_service.domain.common.service.AbstractCrudService;
 import org.sp.payroll_service.domain.core.entity.Company;
 import org.sp.payroll_service.domain.wallet.entity.Account;
-import org.sp.payroll_service.repository.AccountRepository;
 import org.sp.payroll_service.repository.CompanyRepository;
 import org.sp.payroll_service.repository.EmployeeRepository;
 import org.sp.payroll_service.repository.UserRepository;
 import org.sp.payroll_service.security.JwtTokenProvider;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Concrete service implementation for managing {@code User} entities.
@@ -120,48 +115,6 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
         }
 
         return super.update(id, request);
-    }
-
-    // --- Custom Search Implementation (Overrides AbstractCrudService.search) ---
-
-    /**
-     * Executes a dynamic search for users based on the provided filter criteria and pagination settings.
-     * Uses JPA Specifications to build the query chain and runs **asynchronously** on a virtual thread executor.
-     *
-     * @param filter   The {@code UserFilter} DTO containing search criteria (keyword, role).
-     * @param pageable The pagination and sorting information.
-     * @return A {@code CompletableFuture} containing a {@code Page} of {@code UserResponse} DTOs.
-     */
-    @Override
-    @Async("virtualThreadExecutor")
-    @Transactional(readOnly = true)
-    public Page<UserResponse> search(UserFilter filter, Pageable pageable) {
-
-        // Start with an empty specification (no where clause)
-        Specification<User> spec = (root, query, cb) -> null;
-
-        // Keyword filter
-        if (filter.keyword() != null && !filter.keyword().isBlank()) {
-            String pattern = "%" + filter.keyword().toLowerCase() + "%";
-
-            Specification<User> keywordSpec = (root, query, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("username")), pattern),
-                    cb.like(cb.lower(root.get("email")), pattern)
-            );
-
-            spec = spec.and(keywordSpec);
-        }
-
-        // Role filter
-        if (filter.role() != null) {
-            Specification<User> roleSpec = (root, query, cb) -> cb.equal(root.get("role"), filter.role());
-            spec = spec.and(roleSpec);
-        }
-
-        // Query execution
-        Page<User> entityPage = specExecutor.findAll(spec, pageable);
-
-        return entityPage.map(this::mapToResponse);
     }
 
     /**
@@ -354,5 +307,29 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
         if (userRepository.existsByEmailAndIdNot(newEmail, currentId)) {
             throw DuplicateEntryException.forEntity("User", "email", newEmail);
         }
+    }
+
+    @Override
+    protected Specification<User> buildSpecificationFromFilter(UserFilter filter) {
+        return (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+
+            if (filter.keyword() != null && !filter.keyword().isBlank()) {
+                String pattern = "%" + filter.keyword().toLowerCase() + "%";
+                jakarta.persistence.criteria.Predicate usernameLike = cb.like(cb.lower(root.get("username")), pattern);
+                jakarta.persistence.criteria.Predicate emailLike = cb.like(cb.lower(root.get("email")), pattern);
+                predicates.add(cb.or(usernameLike, emailLike));
+            }
+
+            if (filter.role() != null) {
+                predicates.add(cb.equal(root.get("role"), filter.role()));
+            }
+
+            if (predicates.isEmpty()) {
+                return cb.conjunction();
+            } else {
+                return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+            }
+        };
     }
 }

@@ -8,12 +8,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sp.payroll_service.api.payroll.dto.SalaryDistributionFormulaCreateRequest;
-import org.sp.payroll_service.api.payroll.dto.SalaryDistributionFormulaFilter;
-import org.sp.payroll_service.api.payroll.dto.SalaryDistributionFormulaResponse;
-import org.sp.payroll_service.api.payroll.dto.SalaryDistributionFormulaUpdateRequest;
+import org.sp.payroll_service.api.payroll.dto.*;
 import org.sp.payroll_service.domain.payroll.service.SalaryDistributionFormulaService;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -136,7 +132,7 @@ public class SalaryDistributionFormulaController {
     })
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Page<SalaryDistributionFormulaResponse>> searchFormulas(
+    public ResponseEntity<PageResponse<SalaryDistributionFormulaResponse>> searchFormulas(
             @Parameter(description = "Filter criteria") @ModelAttribute SalaryDistributionFormulaFilter filter,
             @PageableDefault(size = 20) Pageable pageable) {
         log.debug("Request to search formulas with filters: {} and pageable: {}", filter, pageable);

@@ -1,6 +1,6 @@
 package org.sp.payroll_service.domain.common.service;
 
-import org.springframework.data.domain.Page;
+import org.sp.payroll_service.api.payroll.dto.PageResponse;
 import org.springframework.data.domain.Pageable; // Added for Pageable parameter
 
 import java.util.List;
@@ -32,7 +32,7 @@ public interface BaseCrudService<ID, R, C, U, F> {
      * @param pageable The Spring Data Pageable object defining page number, size, and sorting.
      * @return A Page of Response DTOs.
      */
-    Page<R> findPageAll(Pageable pageable);
+    PageResponse<R> findPageAll(Pageable pageable);
 
     /**
      * Executes a custom, optimal search query based on complex criteria.
@@ -41,5 +41,5 @@ public interface BaseCrudService<ID, R, C, U, F> {
      * @param pageable The Spring Data Pageable object for pagination and sorting of results.
      * @return A Page of Response DTOs matching the filter.
      */
-    Page<R> search(F filter, Pageable pageable);
+    PageResponse<R> search(F filter, Pageable pageable);
 }

@@ -14,19 +14,15 @@ import org.sp.payroll_service.domain.wallet.entity.Account;
 import org.sp.payroll_service.domain.wallet.service.AccountService;
 import org.sp.payroll_service.repository.AccountRepository;
 import org.sp.payroll_service.repository.BranchRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-// REMOVED: import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import jakarta.persistence.criteria.Predicate;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
-// REMOVED: import java.util.concurrent.CompletableFuture;
 
 /**
  * Concrete service implementation for managing {@code Account} entities (wallets).
@@ -124,42 +120,6 @@ public class AccountServiceImpl extends AbstractCrudService<
         );
     }
 
-    // --- Custom Search Implementation ---
-
-    @Override
-    // FIX: Removed @Async("virtualThreadExecutor")
-    @Transactional(readOnly = true)
-    // FIX: Changed return type from CompletableFuture<Page<AccountResponse>> to Page<AccountResponse>
-    public Page<AccountResponse> search(AccountFilter filter, Pageable pageable) {
-        Specification<Account> spec = (root, query, cb) -> {
-            var predicates = new ArrayList<Predicate>();
-
-            if (StringUtils.hasText(filter.keyword())) {
-                String pattern = "%" + filter.keyword().toLowerCase() + "%";
-                Predicate keywordMatch = cb.or(
-                        cb.like(cb.lower(root.get("accountName")), pattern),
-                        cb.like(cb.lower(root.get("accountNumber")), pattern)
-                );
-                predicates.add(keywordMatch);
-            }
-
-            if (filter.ownerType() != null) {
-                predicates.add(cb.equal(root.get("ownerType"), filter.ownerType()));
-            }
-
-            if (filter.ownerId() != null) {
-                predicates.add(cb.equal(root.get("ownerId"), filter.ownerId()));
-            }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-
-        // Blocking JPA call
-        Page<Account> entityPage = specExecutor.findAll(spec, pageable);
-        // FIX: Return the direct Page object
-        return entityPage.map(this::mapToResponse);
-    }
-
     // --- Private Helpers (No changes needed) ---
 
     private Branch getBranchOrThrow(UUID branchId) {
@@ -184,5 +144,31 @@ public class AccountServiceImpl extends AbstractCrudService<
         return accountRepository.findByOwnerIdAndOwnerType(ownerId, ownerType)
                 .map(this::mapToResponse)
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("Account for OwnerId ", ownerId.toString()));
+    }
+
+    @Override
+    protected Specification<Account> buildSpecificationFromFilter(AccountFilter filter) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new java.util.ArrayList<>();
+
+            if (StringUtils.hasText(filter.keyword())) {
+                String pattern = "%" + filter.keyword().toLowerCase() + "%";
+                Predicate keywordMatch = cb.or(
+                        cb.like(cb.lower(root.get("accountName")), pattern),
+                        cb.like(cb.lower(root.get("accountNumber")), pattern)
+                );
+                predicates.add(keywordMatch);
+            }
+
+            if (filter.ownerType() != null) {
+                predicates.add(cb.equal(root.get("ownerType"), filter.ownerType()));
+            }
+
+            if (filter.ownerId() != null) {
+                predicates.add(cb.equal(root.get("ownerId"), filter.ownerId()));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
     }
 }

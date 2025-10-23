@@ -8,10 +8,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.sp.payroll_service.api.payroll.dto.PageResponse;
 import org.sp.payroll_service.api.wallet.dto.*;
 import org.sp.payroll_service.domain.common.enums.OwnerType;
 import org.sp.payroll_service.domain.wallet.service.AccountService;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -128,7 +128,7 @@ public class AccountController {
     })
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public ResponseEntity<Page<AccountResponse>> searchAccounts(
+    public ResponseEntity<PageResponse<AccountResponse>> searchAccounts(
             @Parameter(description = "Filter criteria") @ModelAttribute AccountFilter filter,
             @PageableDefault(size = 20, sort = "accountNumber") Pageable pageable) {
         log.debug("Request to search accounts with filters: {}", filter);

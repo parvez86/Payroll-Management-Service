@@ -1,10 +1,7 @@
 package org.sp.payroll_service.domain.core.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import org.sp.payroll_service.api.core.dto.BranchCreateRequest;
-import org.sp.payroll_service.api.core.dto.BranchFilter;
-import org.sp.payroll_service.api.core.dto.BranchResponse;
-import org.sp.payroll_service.api.core.dto.BranchUpdateRequest;
+import org.sp.payroll_service.api.core.dto.*;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
 import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
 import org.sp.payroll_service.domain.common.service.AbstractCrudService;
@@ -13,15 +10,13 @@ import org.sp.payroll_service.domain.core.entity.Branch;
 import org.sp.payroll_service.domain.core.service.BranchService;
 import org.sp.payroll_service.repository.BankRepository;
 import org.sp.payroll_service.repository.BranchRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import jakarta.persistence.criteria.Predicate;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -71,37 +66,6 @@ public class BranchServiceImpl extends AbstractCrudService<
         return super.update(id, request);
     }
 
-
-    @Override
-    // FIX: Removed @Async("virtualThreadExecutor")
-    @Transactional(readOnly = true)
-    // FIX: Changed return type from CompletableFuture<Page<BranchResponse>> to Page<BranchResponse>
-    public Page<BranchResponse> search(BranchFilter filter, Pageable pageable) {
-        Specification<Branch> spec = (root, query, cb) -> {
-            var predicates = new ArrayList<Predicate>();
-
-            if (StringUtils.hasText(filter.keyword())) {
-                String pattern = "%" + filter.keyword().toLowerCase() + "%";
-                Predicate keywordMatch = cb.or(
-                        cb.like(cb.lower(root.get("branchName")), pattern),
-                        cb.like(cb.lower(root.get("address")), pattern)
-                );
-                predicates.add(keywordMatch);
-            }
-
-            if (filter.bankId() != null) {
-                predicates.add(cb.equal(root.get("bank").get("id"), filter.bankId()));
-            }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-
-        // Blocking JPA call
-        Page<Branch> entityPage = specExecutor.findAll(spec, pageable);
-
-        // FIX: Return the direct Page object
-        return entityPage.map(this::mapToResponse);
-    }
 
     // --- Abstract Mapping Implementations (No changes needed) ---
 
@@ -157,4 +121,27 @@ public class BranchServiceImpl extends AbstractCrudService<
             throw DuplicateEntryException.forEntity("Branch", "branchName", newBranchName);
         }
     }
+
+    @Override
+    protected Specification<Branch> buildSpecificationFromFilter(BranchFilter filter) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new java.util.ArrayList<>();
+
+            if (StringUtils.hasText(filter.keyword())) {
+                String pattern = "%" + filter.keyword().toLowerCase() + "%";
+                Predicate keywordMatch = cb.or(
+                        cb.like(cb.lower(root.get("branchName")), pattern),
+                        cb.like(cb.lower(root.get("address")), pattern)
+                );
+                predicates.add(keywordMatch);
+            }
+
+            if (filter.bankId() != null) {
+                predicates.add(cb.equal(root.get("bank").get("id"), filter.bankId()));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+    }
+
 }

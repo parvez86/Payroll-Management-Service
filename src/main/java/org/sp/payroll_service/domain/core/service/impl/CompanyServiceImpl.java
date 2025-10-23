@@ -25,16 +25,14 @@ import org.sp.payroll_service.repository.TransactionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-// REMOVED: import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import jakarta.persistence.criteria.Predicate;
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
-// REMOVED: import java.util.concurrent.CompletableFuture;
 
 /**
  * Concrete service implementation for managing {@code Company} entities.
@@ -194,39 +192,6 @@ public class CompanyServiceImpl extends AbstractCrudService<
                 .build();
     }
 
-    // --- Custom Search Implementation ---
-
-    @Override
-    // FIX: Removed @Async("virtualThreadExecutor")
-    @Transactional(readOnly = true)
-    // FIX: Changed return type from CompletableFuture<Page<CompanyResponse>> to Page<CompanyResponse>
-    public Page<CompanyResponse> search(CompanyFilter filter, Pageable pageable) {
-        Specification<Company> spec = (root, query, cb) -> {
-            var predicates = new ArrayList<Predicate>();
-
-            if (StringUtils.hasText(filter.keyword())) {
-                String pattern = "%" + filter.keyword().toLowerCase() + "%";
-                Predicate nameMatch = cb.like(cb.lower(root.get("name")), pattern);
-                Predicate descriptionMatch = cb.like(cb.lower(root.get("description")), pattern);
-                predicates.add(cb.or(nameMatch, descriptionMatch));
-            }
-
-            if (filter.salaryFormulaId() != null) {
-                predicates.add(cb.equal(root.get("salaryFormula").get("id"), filter.salaryFormulaId()));
-            }
-
-            if (filter.status() != null) {
-                predicates.add(cb.equal(root.get("transactionStatus"), filter.status()));
-            }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-
-        // Blocking JPA call
-        Page<Company> entityPage = specExecutor.findAll(spec, pageable);
-        return entityPage.map(this::mapToResponse);
-    }
-
     @Override
     @Transactional
     // FIX: Changed return type from CompletableFuture<CompanyResponse> to CompanyResponse
@@ -336,5 +301,29 @@ public class CompanyServiceImpl extends AbstractCrudService<
                         .lastModifiedBy(transaction.getUpdatedBy().toString())
                         .build())
                 .build());
+    }
+
+    @Override
+    protected Specification<Company> buildSpecificationFromFilter(CompanyFilter filter) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new java.util.ArrayList<>();
+
+            if (StringUtils.hasText(filter.keyword())) {
+                String pattern = "%" + filter.keyword().toLowerCase() + "%";
+                Predicate nameMatch = cb.like(cb.lower(root.get("name")), pattern);
+                Predicate descriptionMatch = cb.like(cb.lower(root.get("description")), pattern);
+                predicates.add(cb.or(nameMatch, descriptionMatch));
+            }
+
+            if (filter.salaryFormulaId() != null) {
+                predicates.add(cb.equal(root.get("salaryFormula").get("id"), filter.salaryFormulaId()));
+            }
+
+            if (filter.status() != null) {
+                predicates.add(cb.equal(root.get("transactionStatus"), filter.status()));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
     }
 }

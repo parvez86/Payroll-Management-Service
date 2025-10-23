@@ -11,15 +11,13 @@ import org.sp.payroll_service.domain.common.service.AbstractCrudService;
 import org.sp.payroll_service.domain.core.entity.Grade;
 import org.sp.payroll_service.domain.core.service.GradeService;
 import org.sp.payroll_service.repository.GradeRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import jakarta.persistence.criteria.Predicate;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 
@@ -69,39 +67,6 @@ public class GradeServiceImpl extends AbstractCrudService<
             throw DuplicateEntryException.forEntity("Grade", "name", request.name());
         }
         return super.update(id, request);
-    }
-
-    // --- Custom Search Implementation ---
-    @Override
-    // FIX: Removed @Async("virtualThreadExecutor")
-    @Transactional(readOnly = true)
-    // FIX: Changed return type from CompletableFuture<Page<GradeResponse>> to Page<GradeResponse>
-    public Page<GradeResponse> search(GradeFilter filter, Pageable pageable) {
-        Specification<Grade> spec = (root, query, cb) -> {
-            var predicates = new ArrayList<Predicate>();
-
-            if (StringUtils.hasText(filter.keyword())) {
-                String pattern = "%" + filter.keyword().toLowerCase() + "%";
-                predicates.add(cb.like(cb.lower(root.get("name")), pattern));
-            }
-
-            if (filter.parentId() != null) {
-                // Filter by the parent ID (using the entity's relationship property 'parent')
-                predicates.add(cb.equal(root.get("parent").get("id"), filter.parentId()));
-            }
-
-            if (filter.minRank() != null) {
-                // Filter grades where rank is greater than or equal to the minRank
-                predicates.add(cb.greaterThanOrEqualTo(root.get("rank"), filter.minRank()));
-            }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-
-        // Blocking JPA call
-        Page<Grade> entityPage = specExecutor.findAll(spec, pageable);
-        // Return the direct Page object
-        return entityPage.map(this::mapToResponse);
     }
 
     // --- Abstract Mapping Implementations (No changes needed) ---
@@ -175,5 +140,29 @@ public class GradeServiceImpl extends AbstractCrudService<
         // Use findById and throw if not found
         return gradeRepository.findById(parentId)
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("Parent Grade", parentId));
+    }
+
+    @Override
+    protected Specification<Grade> buildSpecificationFromFilter(GradeFilter filter) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new java.util.ArrayList<>();
+
+            if (StringUtils.hasText(filter.keyword())) {
+                String pattern = "%" + filter.keyword().toLowerCase() + "%";
+                predicates.add(cb.like(cb.lower(root.get("name")), pattern));
+            }
+
+            if (filter.parentId() != null) {
+                // Filter by the parent ID (using the entity's relationship property 'parent')
+                predicates.add(cb.equal(root.get("parent").get("id"), filter.parentId()));
+            }
+
+            if (filter.minRank() != null) {
+                // Filter grades where rank is greater than or equal to the minRank
+                predicates.add(cb.greaterThanOrEqualTo(root.get("rank"), filter.minRank()));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
     }
 }

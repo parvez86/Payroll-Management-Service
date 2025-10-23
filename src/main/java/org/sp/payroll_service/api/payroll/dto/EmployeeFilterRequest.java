@@ -1,6 +1,7 @@
 package org.sp.payroll_service.api.payroll.dto;
 
 import lombok.Builder;
+import org.sp.payroll_service.domain.common.enums.EntityStatus;
 import org.sp.payroll_service.domain.core.entity.Grade;
 import org.sp.payroll_service.domain.common.enums.EmploymentStatus;
 
@@ -26,10 +27,6 @@ import java.util.UUID;
  * @param status Filters employees matching this specific {@link EmploymentStatus}.
  * @param hiredAfter Filters employees who were hired on or after this date.
  * Must be a valid {@code LocalDate}.
- * @param page The requested page number for pagination (1-indexed). Defaults to 1.
- * @param size The number of results to include per page. Defaults to a system maximum (e.g., 20).
- * @param sortBy The field name used to sort the results (e.g., "lastName", "hiredDate").
- * @param sortDirection The direction of the sort: "asc" for ascending, "desc" for descending.
  */
 @Builder
 public record EmployeeFilterRequest(
@@ -41,15 +38,8 @@ public record EmployeeFilterRequest(
 
     UUID gradeId,
 
-    EmploymentStatus status,
+//    EmploymentStatus status,
+    EntityStatus status,
 
-    Instant hiredAfter,
-
-    Integer page,
-
-    Integer size,
-
-    String sortBy,
-
-    String sortDirection
+    Instant hiredAfter
 ) {}

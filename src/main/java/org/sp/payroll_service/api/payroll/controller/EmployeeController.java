@@ -12,8 +12,8 @@ import org.sp.payroll_service.api.payroll.dto.CreateEmployeeRequest;
 import org.sp.payroll_service.api.payroll.dto.EmployeeFilterRequest;
 import org.sp.payroll_service.api.payroll.dto.EmployeeResponse;
 import org.sp.payroll_service.api.payroll.dto.EmployeeUpdateRequest;
+import org.sp.payroll_service.api.payroll.dto.PageResponse;
 import org.sp.payroll_service.domain.payroll.service.EmployeeService;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -64,7 +64,7 @@ public class EmployeeController {
     })
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public ResponseEntity<Page<EmployeeResponse>> getAllEmployees(
+    public ResponseEntity<PageResponse<EmployeeResponse>> getAllEmployees(
             @Parameter(description = "Filter criteria") @ModelAttribute EmployeeFilterRequest filter,
             @PageableDefault(size = 20, sort = "grade.rank") Pageable pageable) {
         log.debug("Retrieving employees with filter: {}", filter);
@@ -107,13 +107,12 @@ public class EmployeeController {
     })
     @GetMapping("/grade/{gradeId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public ResponseEntity<Page<EmployeeResponse>> getEmployeesByGrade(
+    public ResponseEntity<PageResponse<EmployeeResponse>> getEmployeesByGrade(
             @Parameter(description = "Grade ID") @PathVariable UUID gradeId,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
         log.debug("Retrieving employees for grade: {}", gradeId);
         EmployeeFilterRequest filter = new EmployeeFilterRequest(
-                null, null, null, gradeId, null, null, null, null, null, null
-        );
+                null, null, null, gradeId, null, null);
         return ResponseEntity.ok(employeeService.search(filter, pageable));
     }
 

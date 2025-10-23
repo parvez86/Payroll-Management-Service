@@ -13,6 +13,7 @@ import org.sp.payroll_service.api.core.dto.CompanyFilter;
 import org.sp.payroll_service.api.core.dto.CompanyResponse;
 import org.sp.payroll_service.api.core.dto.CompanyTopUpRequest;
 import org.sp.payroll_service.api.core.dto.CompanyUpdateRequest;
+import org.sp.payroll_service.api.payroll.dto.PageResponse;
 import org.sp.payroll_service.api.payroll.dto.TransactionResponse;
 import org.sp.payroll_service.api.wallet.dto.AccountResponse;
 import org.sp.payroll_service.domain.core.service.CompanyService;
@@ -97,7 +98,7 @@ public class CompanyController {
     @Operation(summary = "Search and paginate Company records.")
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-    public ResponseEntity<Page<CompanyResponse>> searchCompanies(
+    public ResponseEntity<PageResponse<CompanyResponse>> searchCompanies(
             @ModelAttribute CompanyFilter filter,
             @PageableDefault(size = 20, sort = "name") Pageable pageable) {
         log.debug("Request to search companies with filters: {}", filter);

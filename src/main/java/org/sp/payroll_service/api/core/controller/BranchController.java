@@ -9,6 +9,7 @@ import org.sp.payroll_service.api.core.dto.BranchCreateRequest;
 import org.sp.payroll_service.api.core.dto.BranchFilter;
 import org.sp.payroll_service.api.core.dto.BranchResponse;
 import org.sp.payroll_service.api.core.dto.BranchUpdateRequest;
+import org.sp.payroll_service.api.payroll.dto.PageResponse;
 import org.sp.payroll_service.domain.core.service.BranchService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -126,7 +127,7 @@ public class BranchController {
     @Operation(summary = "Search branches using dynamic filters and pagination")
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER', 'ACCOUNTANT')")
-    public ResponseEntity<Page<BranchResponse>> searchBranches(
+    public ResponseEntity<PageResponse<BranchResponse>> searchBranches(
             @ModelAttribute BranchFilter filter,
             @PageableDefault(size = 20, sort = "branchName") Pageable pageable) {
         log.debug("Request to search branches with filters: {}", filter);

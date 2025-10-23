@@ -1,19 +1,17 @@
 package org.sp.payroll_service.domain.common.service;
 
+import org.sp.payroll_service.api.payroll.dto.PageResponse;
 import org.sp.payroll_service.domain.common.entity.BaseEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
-
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 /**
@@ -50,6 +48,11 @@ public abstract class AbstractCrudService<
     protected abstract E mapToEntity(C creationRequest);
     protected abstract E mapToEntity(U updateRequest, E entity);
     protected abstract R mapToResponse(E entity);
+    protected List<R> mapToResponse(List<E> entityList){
+        return (entityList == null) ? Collections.emptyList() : entityList.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
 
     // --- BASE CRUD IMPLEMENTATIONS (Transactional & Asynchronous) ---
 
@@ -101,25 +104,52 @@ public abstract class AbstractCrudService<
 
     @Override
     @Transactional(readOnly = true)
-    public Page<R> findPageAll(Pageable pageable) {
+    public PageResponse<R> findPageAll(Pageable pageable) {
         Page<E> entityPage = repository.findAll(pageable);
-        return entityPage.map(this::mapToResponse);
+        return PageResponse.from(
+                this.mapToResponse(entityPage.getContent()),
+                entityPage.getTotalElements(),
+                entityPage.getPageable()
+        );
     }
 
     /**
-     * The search method MUST be implemented in the concrete service class.
-     * We provide a default implementation that executes the search synchronously
-     * if the filter is a JPA Specification, otherwise it throws UnsupportedOperationException.
+     * The search method provides a default implementation that executes the search synchronously.
+     * Subclasses can override this method to provide custom pagination hardening and filtering logic.
+     * This method returns PageResponse with complete pagination metadata.
      *
-     * @param filter Must be castable to Specification<E> in the implementation.
+     * @param filter The filter criteria (subclasses should override buildSpecificationFromFilter to handle)
+     * @param pageable The pagination and sorting information
+     * @return PageResponse containing mapped results and pagination metadata
      */
-    @SuppressWarnings("unchecked")
-    public Page<R> search(F filter, Pageable pageable) {
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<R> search(F filter, Pageable pageable) {
+        Specification<E> spec = buildSpecificationFromFilter(filter);
+        Page<E> entityPage = specExecutor.findAll(spec, pageable);
+        return PageResponse.from(
+                this.mapToResponse(entityPage.getContent()),
+                entityPage.getTotalElements(),
+                entityPage.getPageable()
+        );
+    }
+
+    /**
+     * Hook to build a Specification from the filter.
+     * Subclasses should override when F is not a Specification or when custom filtering is needed.
+     * This is the extension point for custom filtering logic.
+     *
+     * @param filter The filter DTO
+     * @return A JPA Specification for querying
+     */
+    protected Specification<E> buildSpecificationFromFilter(F filter) {
+        // Default: if F is a Specification<E>, use it; otherwise no filtering.
         if (filter instanceof Specification) {
-            Page<E> entityPage = specExecutor.findAll((Specification<E>) filter, pageable);
-            return entityPage.map(this::mapToResponse);
-        } else {
-            throw new UnsupportedOperationException("Search operation must be implemented in the concrete service for " + entityName + ".");
+            @SuppressWarnings("unchecked")
+            Specification<E> spec = (Specification<E>) filter;
+            return spec;
         }
+        // No filtering by default
+        return (root, query, cb) -> cb.conjunction();
     }
 }

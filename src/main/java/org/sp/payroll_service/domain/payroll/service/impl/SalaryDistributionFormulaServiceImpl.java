@@ -1,26 +1,19 @@
 package org.sp.payroll_service.domain.payroll.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import org.sp.payroll_service.api.payroll.dto.SalaryDistributionFormulaCreateRequest;
-import org.sp.payroll_service.api.payroll.dto.SalaryDistributionFormulaFilter;
-import org.sp.payroll_service.api.payroll.dto.SalaryDistributionFormulaResponse;
-import org.sp.payroll_service.api.payroll.dto.SalaryDistributionFormulaUpdateRequest;
+import org.sp.payroll_service.api.payroll.dto.*;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
 import org.sp.payroll_service.domain.common.service.AbstractCrudService;
 import org.sp.payroll_service.domain.payroll.entity.SalaryDistributionFormula;
 import org.sp.payroll_service.domain.payroll.service.SalaryDistributionFormulaService;
 import org.sp.payroll_service.repository.SalaryDistributionFormulaRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
 import java.util.UUID;
-// REMOVED: import java.util.concurrent.CompletableFuture;
-// REMOVED: import org.springframework.scheduling.annotation.Async;
-
 import jakarta.persistence.criteria.Predicate;
 
 /**
@@ -95,53 +88,6 @@ public class SalaryDistributionFormulaServiceImpl extends AbstractCrudService<
         return super.update(id, request);
     }
 
-    // --- Custom Search Implementation (Overrides AbstractCrudService.search) ---
-
-    /**
-     * Executes a dynamic search for salary formulas based on the provided filter criteria and pagination settings.
-     * Uses JPA Specifications to build the query chain.
-     *
-     * @param filter The {@code SalaryDistributionFormulaFilter} DTO containing search criteria.
-     * @param pageable The pagination and sorting information.
-     * @return A {@code Page} of {@code SalaryDistributionFormulaResponse} DTOs.
-     */
-    @Override
-    // FIX: Removed @Async("virtualThreadExecutor")
-    @Transactional(readOnly = true)
-    // FIX: Removed CompletableFuture<...>
-    public Page<SalaryDistributionFormulaResponse> search(SalaryDistributionFormulaFilter filter, Pageable pageable) {
-        log.debug("Executing search for SalaryFormulas with filter: {}", filter);
-
-        Specification<SalaryDistributionFormula> spec = (root, query, cb) -> {
-            var predicates = new java.util.ArrayList<Predicate>();
-
-            // Filter by Name (Case-insensitive LIKE search)
-            if (StringUtils.hasText(filter.name())) {
-                String pattern = "%" + filter.name().toLowerCase() + "%";
-                predicates.add(cb.like(cb.lower(root.get("name")), pattern));
-            }
-
-            // Filter by Formula Type (Exact match)
-            // NOTE: Assuming filter.baseSalaryGrade() is a string or compatible type for comparison
-            if (filter.baseSalaryGrade() != null) {
-                predicates.add(cb.equal(root.get("baseSalaryGrade"), filter.baseSalaryGrade()));
-            }
-
-            // Filter by Status (Is Active)
-            // NOTE: The filter property (createdBy) seems inconsistent with the field used (createdBy)
-            if (filter.createdBy() != null) {
-                predicates.add(cb.equal(root.get("createdBy"), filter.createdBy()));
-            }
-
-            // Combine all predicates with AND logic
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-
-        // Blocking Query execution
-        Page<SalaryDistributionFormula> entityPage = formulaRepository.findAll(spec, pageable);
-        return entityPage.map(this::mapToResponse); // Return the direct Page object
-    }
-
     // --- Abstract Mapping Implementations (No changes needed) ---
 
     @Override
@@ -195,5 +141,31 @@ public class SalaryDistributionFormulaServiceImpl extends AbstractCrudService<
                 throw DuplicateEntryException.forEntity("SalaryFormula", "name", newName);
             }
         });
+    }
+
+    @Override
+    protected Specification<SalaryDistributionFormula> buildSpecificationFromFilter(SalaryDistributionFormulaFilter filter) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new java.util.ArrayList<>();
+
+            if (StringUtils.hasText(filter.name())) {
+                String pattern = "%" + filter.name().toLowerCase() + "%";
+                predicates.add(cb.like(cb.lower(root.get("name")), pattern));
+            }
+
+            // Filter by Formula Type (Exact match)
+            // NOTE: Assuming filter.baseSalaryGrade() is a string or compatible type for comparison
+            if (filter.baseSalaryGrade() != null) {
+                predicates.add(cb.equal(root.get("baseSalaryGrade"), filter.baseSalaryGrade()));
+            }
+
+            // Filter by Status (Is Active)
+            // NOTE: The filter property (createdBy) seems inconsistent with the field used (createdBy)
+            if (filter.createdBy() != null) {
+                predicates.add(cb.equal(root.get("createdBy"), filter.createdBy()));
+            }
+
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
     }
 }
