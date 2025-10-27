@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.sp.payroll_service.domain.auth.entity.User;
+import org.sp.payroll_service.domain.common.enums.EntityStatus;
 import org.sp.payroll_service.domain.common.repository.BaseRepository;
 import org.springframework.stereotype.Repository;
 
@@ -29,6 +30,14 @@ public interface UserRepository extends BaseRepository<User, UUID> {
      * @return optional user entity
      */
     Optional<User> findByEmail(String email);
+
+    /**
+     * Finds user by email for validation.
+     * @param email user email
+     * @param status user status
+     * @return optional user entity
+     */
+    Optional<User> findByEmailAndStatus(String email, EntityStatus status);
     
     /**
      * Checks if username exists for validation.

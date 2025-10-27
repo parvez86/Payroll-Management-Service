@@ -37,10 +37,10 @@ public interface BaseRepository<T, ID extends Serializable>
 
 
     /**
-     * Find an entity by ID and specific transactionStatus.
+     * Find an entity by ID and specific status.
      */
     @Query("SELECT e FROM #{#entityName} e WHERE e.id = :id AND e.status = :status")
-    Optional<T> findByIdAndStatus(@Param("id") ID id, @Param("transactionStatus") EntityStatus status);
+    Optional<T> findByIdAndStatus(@Param("id") ID id, @Param("status") EntityStatus status);
 
     /**
      * Find all active entities.

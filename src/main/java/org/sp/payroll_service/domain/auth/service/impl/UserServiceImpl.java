@@ -136,17 +136,14 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
 
     @Override
     @Transactional(readOnly = true)
-    public UserDetailsResponse me(String accessToken) {
+    public UserDetailsResponse me(String username) {
         log.debug("Getting user details from access token");
         
         try {
-            // 1. Validate and extract user ID from token
-            UUID userId = jwtTokenProvider.getUserIdFromJWT(accessToken);
-            log.debug("Extracted user ID from token: {}", userId);
-            
+
             // 2. Find user by ID
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> ResourceNotFoundException.forEntity("User", userId));
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> ResourceNotFoundException.forEntity("User", username));
             log.debug("Found user: {}", user.getUsername());
             
             // 3. Map user to UserResponse
@@ -160,7 +157,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
             String bizId = null;
             
             // 5. Check if user is an employee to get additional details
-            var employeeOpt = employeeRepository.findByUserId(userId);
+            var employeeOpt = employeeRepository.findByUserId(user.getId());
             if (employeeOpt.isPresent()) {
                 var employee = employeeOpt.get();
                 log.debug("User is an employee with code: {}", employee.getCode());

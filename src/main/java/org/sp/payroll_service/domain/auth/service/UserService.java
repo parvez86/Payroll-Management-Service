@@ -29,8 +29,8 @@ public interface UserService extends BaseCrudService<
     /**
      * Find a user by token.
      *
-     * @param accessToken the accessToken of the user
+     * @param username the username of the user
      * @return a UserResponse, or null if not found
      */
-    UserDetailsResponse me (@NotBlank String accessToken);
+    UserDetailsResponse me (@NotBlank String username);
 }

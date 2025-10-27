@@ -14,6 +14,8 @@ import org.sp.payroll_service.domain.auth.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -167,11 +169,10 @@ public class AuthController {
             @ApiResponse(responseCode = "404", description = "User not found")
     })
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserDetailsResponse> me(
-            @RequestHeader("authorization") String token) {
+    public ResponseEntity<UserDetailsResponse> me(@AuthenticationPrincipal UserDetails currentUser) {
         log.info("Get current user details API called");
         try {
-            UserDetailsResponse response = userService.me(token);
+            UserDetailsResponse response = userService.me(currentUser.getUsername());
             log.info("User details retrieved successfully");
             return ResponseEntity.ok(response);
         } catch (Exception e) {

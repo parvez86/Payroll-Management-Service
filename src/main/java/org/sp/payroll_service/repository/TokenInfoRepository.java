@@ -89,4 +89,5 @@ public interface TokenInfoRepository extends JpaRepository<TokenInfo, UUID> {
 
     Optional<TokenInfo> findByAccessJtiAndIsRevokedFalseAndAccessExpiresAfter(String jti, Instant now);
 
+    boolean existsByAccessJtiAndIsRevokedTrue(String jti);
 }

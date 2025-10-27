@@ -9,6 +9,7 @@ import org.sp.payroll_service.api.auth.dto.UserCreateRequest;
 import org.sp.payroll_service.api.auth.dto.UserResponse;
 import org.sp.payroll_service.domain.auth.entity.TokenInfo;
 import org.sp.payroll_service.domain.auth.entity.User;
+import org.sp.payroll_service.domain.common.enums.EntityStatus;
 import org.sp.payroll_service.domain.common.enums.Role;
 import org.sp.payroll_service.domain.common.exception.AuthenticationException;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
@@ -140,7 +141,7 @@ public class JwtAuthenticationService implements AuthenticationService {
         }
 
         UUID userId = tokenProvider.getUserIdFromJWT(token);
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndStatus(userId, EntityStatus.ACTIVE)
                 .orElseThrow(() -> {
                     log.warn("User ID {} from token not found in the database.", userId);
                     return new UsernameNotFoundException("User associated with token not found.");

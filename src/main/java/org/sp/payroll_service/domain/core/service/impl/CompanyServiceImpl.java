@@ -271,8 +271,8 @@ public class CompanyServiceImpl extends AbstractCrudService<
 
         // 3. Find all transactions for this account (both from and to)
         Specification<Transaction> spec = (root, query, cb) -> {
-            Predicate fromAccount = cb.equal(root.get("fromAccount").get("id"), companyAccount.getId());
-            Predicate toAccount = cb.equal(root.get("toAccount").get("id"), companyAccount.getId());
+            Predicate fromAccount = cb.equal(root.get("debitAccount").get("id"), companyAccount.getId());
+            Predicate toAccount = cb.equal(root.get("creditAccount").get("id"), companyAccount.getId());
             return cb.or(fromAccount, toAccount);
         };
 
@@ -320,7 +320,7 @@ public class CompanyServiceImpl extends AbstractCrudService<
             }
 
             if (filter.status() != null) {
-                predicates.add(cb.equal(root.get("transactionStatus"), filter.status()));
+                predicates.add(cb.equal(root.get("status"), filter.status()));
             }
 
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
