@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd"> <changeSet id="015-insert-banks-data" author="payroll-service">
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd
+         http://www.liquibase.org/xml/ns/dbchangelog-ext
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+
+    <changeSet id="015-insert-banks-data" author="payroll-service">
         <comment>Insert initial bank data for development environment</comment>
-        
+
         <insert tableName="banks">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="name" value="Bangladesh Bank"/>
@@ -26,7 +31,7 @@
             <column name="country_code" value="BD"/>
             <column name="swift_bic_code" value="DBBLBDDH"/>
         </insert>
-        
+
         <rollback>
             <delete tableName="banks">
                 <where>swift_bic_code IN ('BBHOBDDHXXX', 'BSONBDDHXXX', 'DBBLBDDH')</where>
@@ -36,25 +41,28 @@
 
     <changeSet id="016-insert-branches-data" author="payroll-service">
         <comment>Insert initial branch data for development environment</comment>
-        
+
         <insert tableName="branch">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="branch_name" value="Motijheel Branch"/>
             <column name="address" value="Motijheel Commercial Area, Dhaka"/>
-            <column name="bank_id" valueComputed="(SELECT id FROM banks WHERE name = 'Bangladesh Bank' LIMIT 1)"/> </insert>
-        
+            <column name="bank_id" valueComputed="(SELECT id FROM banks WHERE name = 'Bangladesh Bank' LIMIT 1)"/>
+        </insert>
+
         <insert tableName="branch">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="branch_name" value="Dhanmondi Branch"/>
             <column name="address" value="Dhanmondi Road 27, Dhaka"/>
-            <column name="bank_id" valueComputed="(SELECT id FROM banks WHERE name = 'Sonali Bank' LIMIT 1)"/> </insert>
-        
+            <column name="bank_id" valueComputed="(SELECT id FROM banks WHERE name = 'Sonali Bank' LIMIT 1)"/>
+        </insert>
+
         <insert tableName="branch">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="branch_name" value="Gulshan Branch"/>
             <column name="address" value="Gulshan Avenue, Dhaka"/>
-            <column name="bank_id" valueComputed="(SELECT id FROM banks WHERE name = 'Dutch Bangla Bank' LIMIT 1)"/> </insert>
-        
+            <column name="bank_id" valueComputed="(SELECT id FROM banks WHERE name = 'Dutch Bangla Bank' LIMIT 1)"/>
+        </insert>
+
         <rollback>
             <delete tableName="branch">
                 <where>branch_name IN ('Motijheel Branch', 'Dhanmondi Branch', 'Gulshan Branch')</where>
@@ -64,7 +72,7 @@
 
     <changeSet id="017-insert-salary-formula-data" author="payroll-service">
         <comment>Insert initial salary distribution formula for development environment</comment>
-        
+
         <insert tableName="salary_distribution_formulas">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="name" value="Standard Bangladesh Formula"/>
@@ -73,7 +81,7 @@
             <column name="medical_percentage" value="0.1500"/>
             <column name="grade_increment_amount" value="5000.00"/>
         </insert>
-        
+
         <rollback>
             <delete tableName="salary_distribution_formulas">
                 <where>name = 'Standard Bangladesh Formula'</where>
@@ -83,7 +91,7 @@
 
     <changeSet id="018-insert-company-account-data" author="payroll-service">
         <comment>Insert company main account for payroll operations (before company creation)</comment>
-        
+
         <insert tableName="accounts">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="owner_type" value="COMPANY"/>
@@ -95,7 +103,7 @@
             <column name="overdraft_limit" value="0.0000"/>
             <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Motijheel Branch' LIMIT 1)"/>
         </insert>
-        
+
         <rollback>
             <delete tableName="accounts">
                 <where>account_number = 'COMP001'</where>
@@ -103,45 +111,49 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="019-insert-grades-data" author="payroll-service">
-        <comment>Insert grades following SRS requirement: 1,1,2,2,2,2 distribution</comment>
-        
-        <insert tableName="grades">
-            <column name="id" valueComputed="gen_random_uuid()"/>
-            <column name="name" value="Grade 1"/>
-            <column name="rank" value="1"/>
-        </insert>
-        
-        <insert tableName="grades">
-            <column name="id" valueComputed="gen_random_uuid()"/>
-            <column name="name" value="Grade 2"/>
-            <column name="rank" value="2"/>
-        </insert>
-        
-        <insert tableName="grades">
-            <column name="id" valueComputed="gen_random_uuid()"/>
-            <column name="name" value="Grade 3"/>
-            <column name="rank" value="3"/>
-        </insert>
-        
-        <insert tableName="grades">
-            <column name="id" valueComputed="gen_random_uuid()"/>
-            <column name="name" value="Grade 4"/>
-            <column name="rank" value="4"/>
-        </insert>
-        
-        <insert tableName="grades">
-            <column name="id" valueComputed="gen_random_uuid()"/>
-            <column name="name" value="Grade 5"/>
-            <column name="rank" value="5"/>
-        </insert>
-        
-        <insert tableName="grades">
-            <column name="id" valueComputed="gen_random_uuid()"/>
-            <column name="name" value="Grade 6"/>
-            <column name="rank" value="6"/>
-        </insert>
-        
+    <changeSet id="019-insert-grades-data" author="payroll-service" dbms="postgresql">
+        <comment>Insert grades with hierarchy (1,1,2,2,2,2 distribution) using native SQL for parent_id tracking. FIX: splitStatements=false</comment>
+
+        <sql splitStatements="false" stripComments="true">
+            -- Declare variables to hold the generated UUIDs
+            DO $$
+                DECLARE
+                    grade1_id UUID;
+                    grade2_id UUID;
+                BEGIN
+
+                    --------------------------------------------------
+                    -- 1. Insert Top Level (Grade 1) - No Parent
+                    --------------------------------------------------
+                    INSERT INTO grades (id, name, rank, parent_id)
+                    VALUES (gen_random_uuid(), 'Grade 1', 1, NULL)
+                    RETURNING id INTO grade1_id;
+
+                    --------------------------------------------------
+                    -- 2. Insert Children of Grade 1 (Grade 2, Grade 3)
+                    --------------------------------------------------
+                    INSERT INTO grades (id, name, rank, parent_id)
+                    VALUES (gen_random_uuid(), 'Grade 2', 2, grade1_id)
+                    RETURNING id INTO grade2_id;
+
+                    INSERT INTO grades (id, name, rank, parent_id)
+                    VALUES (gen_random_uuid(), 'Grade 3', 3, grade1_id);
+
+                    --------------------------------------------------
+                    -- 3. Insert Children of Grade 2 (Grade 4, 5, 6)
+                    --------------------------------------------------
+                    INSERT INTO grades (id, name, rank, parent_id)
+                    VALUES (gen_random_uuid(), 'Grade 4', 4, grade2_id);
+
+                    INSERT INTO grades (id, name, rank, parent_id)
+                    VALUES (gen_random_uuid(), 'Grade 5', 5, grade2_id);
+
+                    INSERT INTO grades (id, name, rank, parent_id)
+                    VALUES (gen_random_uuid(), 'Grade 6', 6, grade2_id);
+
+                END $$;
+        </sql>
+
         <rollback>
             <delete tableName="grades">
                 <where>name IN ('Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6')</where>
@@ -151,14 +163,15 @@
 
     <changeSet id="020-insert-admin-user-data" author="payroll-service">
         <comment>Insert admin user for system administration</comment>
-        
+
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="admin"/>
             <column name="email" value="admin@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$DStt8gfwgRjiVKbE0s9yQuZJH3xyp0bjc6nW.HHyqolXQQMwHNXW."/> <column name="role" value="ADMIN"/>
+            <column name="password_hash" value="$2a$12$DStt8gfwgRjiVKbE0s9yQuZJH3xyp0bjc6nW.HHyqolXQQMwHNXW."/>
+            <column name="role" value="ADMIN"/>
         </insert>
-        
+
         <rollback>
             <delete tableName="users">
                 <where>username = 'admin'</where>
@@ -168,7 +181,7 @@
 
     <changeSet id="021-insert-company-data" author="payroll-service">
         <comment>Insert initial company data for development environment</comment>
-        
+
         <insert tableName="companies">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="name" value="TechCorp Bangladesh Ltd"/>
@@ -176,7 +189,7 @@
             <column name="salary_formula_id" valueComputed="(SELECT id FROM salary_distribution_formulas WHERE name = 'Standard Bangladesh Formula' LIMIT 1)"/>
             <column name="main_account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'COMP001' LIMIT 1)"/>
         </insert>
-        
+
         <rollback>
             <delete tableName="companies">
                 <where>name = 'TechCorp Bangladesh Ltd'</where>
@@ -186,12 +199,12 @@
 
     <changeSet id="021-update-company-account-owner" author="payroll-service">
         <comment>Update company account owner_id to reference the created company</comment>
-        
+
         <update tableName="accounts">
             <column name="owner_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/>
             <where>account_number = 'COMP001'</where>
         </update>
-        
+
         <rollback>
             <update tableName="accounts">
                 <column name="owner_id" value="00000000-0000-0000-0000-000000000000"/>
@@ -202,7 +215,7 @@
 
     <changeSet id="022-insert-employee-users-data" author="payroll-service">
         <comment>Insert employee users (10 employees as per SRS requirement: 1,1,2,2,2,2 distribution)</comment>
-        
+
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="director001"/>
@@ -210,7 +223,7 @@
             <column name="password_hash" value="$2a$12$vn5hv7GLTylKCy3FGJHYlebS3ex618q3QkvuJkL/ameW5MXmsbIO2"/>
             <column name="role" value="EMPLOYER"/>
         </insert>
-        
+
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="manager001"/>
@@ -218,7 +231,7 @@
             <column name="password_hash" value="$2a$12$pRu2rXoQZvFU7yawAwRCweQSHCmca1V.hU.5UHmVHS4jyQ2lCiQPW"/>
             <column name="role" value="EMPLOYER"/>
         </insert>
-        
+
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="senior001"/>
@@ -226,7 +239,7 @@
             <column name="password_hash" value="$2a$12$lsCxB.08QCLZ9ExLIqk04eOwQvxdwqmI8ZJM.0OiRV4xxsaOjusIi"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
-        
+
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="senior002"/>
@@ -234,7 +247,7 @@
             <column name="password_hash" value="$2a$12$tGVfnO.zQfjvaFmagVXvV..DpbevDiVZjbnlpYq2F83Cr2/Vlw4Ke"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
-        
+
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="dev001"/>
@@ -242,7 +255,7 @@
             <column name="password_hash" value="$2a$12$OLR22Kjr6PHVtIrlS7wLAef.5omCgDvw6U7QLQ.wtFx5rr4zWp9gi"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
-        
+
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="dev002"/>
@@ -250,7 +263,7 @@
             <column name="password_hash" value="$2a$12$vf4722OFHIUFprTDqBKqge1NJny7iqHewYYCFCbSjw23rH0dQUnn6"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
-        
+
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="junior001"/>
@@ -258,7 +271,7 @@
             <column name="password_hash" value="$2a$12$TdembWUUDFtvnYADZA0qIOGWDKFS4P7eZzQTMyJAHl/53BGLalrPK"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
-        
+
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="junior002"/>
@@ -266,7 +279,7 @@
             <column name="password_hash" value="$2a$12$gkayhwIO1Ie6Ie9LJI0e7.SbzU67JuFrLbspkfwb5Of1bOYzT/gMu"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
-        
+
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="intern001"/>
@@ -274,7 +287,7 @@
             <column name="password_hash" value="$2a$12$J6fvKFCRPTCRsMvQ.xxMxuXGq2FNlReBeYnGN6AM2SJPrhGDRAvsq"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
-        
+
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="intern002"/>
@@ -282,7 +295,7 @@
             <column name="password_hash" value="$2a$12$xgLPtmtGh8wFmQdUHzxKzO1jjO2eJfXcIb71GYhQ0XYLGeTNmwRjq"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
-        
+
         <rollback>
             <delete tableName="users">
                 <where>username IN ('director001', 'manager001', 'senior001', 'senior002', 'dev001', 'dev002', 'junior001', 'junior002', 'intern001', 'intern002')</where>
@@ -292,7 +305,7 @@
 
     <changeSet id="023-insert-employee-accounts-data" author="payroll-service">
         <comment>Insert employee accounts for salary transfers</comment>
-        
+
         <insert tableName="accounts">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="owner_type" value="EMPLOYEE"/>
@@ -304,7 +317,7 @@
             <column name="overdraft_limit" value="0.0000"/>
             <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Motijheel Branch' LIMIT 1)"/>
         </insert>
-        
+
         <insert tableName="accounts">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="owner_type" value="EMPLOYEE"/>
@@ -316,7 +329,7 @@
             <column name="overdraft_limit" value="0.0000"/>
             <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Dhanmondi Branch' LIMIT 1)"/>
         </insert>
-        
+
         <insert tableName="accounts">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="owner_type" value="EMPLOYEE"/>
@@ -328,7 +341,7 @@
             <column name="overdraft_limit" value="0.0000"/>
             <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Gulshan Branch' LIMIT 1)"/>
         </insert>
-        
+
         <insert tableName="accounts">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="owner_type" value="EMPLOYEE"/>
@@ -340,7 +353,7 @@
             <column name="overdraft_limit" value="0.0000"/>
             <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Motijheel Branch' LIMIT 1)"/>
         </insert>
-        
+
         <insert tableName="accounts">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="owner_type" value="EMPLOYEE"/>
@@ -352,7 +365,7 @@
             <column name="overdraft_limit" value="0.0000"/>
             <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Dhanmondi Branch' LIMIT 1)"/>
         </insert>
-        
+
         <insert tableName="accounts">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="owner_type" value="EMPLOYEE"/>
@@ -364,7 +377,7 @@
             <column name="overdraft_limit" value="0.0000"/>
             <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Gulshan Branch' LIMIT 1)"/>
         </insert>
-        
+
         <insert tableName="accounts">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="owner_type" value="EMPLOYEE"/>
@@ -376,7 +389,7 @@
             <column name="overdraft_limit" value="0.0000"/>
             <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Motijheel Branch' LIMIT 1)"/>
         </insert>
-        
+
         <insert tableName="accounts">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="owner_type" value="EMPLOYEE"/>
@@ -388,7 +401,7 @@
             <column name="overdraft_limit" value="0.0000"/>
             <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Dhanmondi Branch' LIMIT 1)"/>
         </insert>
-        
+
         <insert tableName="accounts">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="owner_type" value="EMPLOYEE"/>
@@ -400,7 +413,7 @@
             <column name="overdraft_limit" value="0.0000"/>
             <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Gulshan Branch' LIMIT 1)"/>
         </insert>
-        
+
         <insert tableName="accounts">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="owner_type" value="EMPLOYEE"/>
@@ -412,7 +425,7 @@
             <column name="overdraft_limit" value="0.0000"/>
             <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Motijheel Branch' LIMIT 1)"/>
         </insert>
-        
+
         <rollback>
             <delete tableName="accounts">
                 <where>account_number IN ('DIR001', 'MGR001', 'SR001', 'SR002', 'DEV001', 'DEV002', 'JR001', 'JR002', 'INT001', 'INT002')</where>
@@ -421,108 +434,128 @@
     </changeSet>
 
     <changeSet id="024-insert-employee-records-data" author="payroll-service">
-        <comment>Insert employee records linking users to accounts and grades (10 employees: 1,1,2,2,2,2 distribution)</comment>
-        
+        <comment>Insert employee records linking users to accounts and grades (10 employees: 1,1,2,2,2,2 distribution) and update mobile numbers with +880 prefix.</comment>
+
         <insert tableName="employees">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="user_id" valueComputed="(SELECT id FROM users WHERE username = 'director001' LIMIT 1)"/>
-            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/> <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'DIR001' LIMIT 1)"/> <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 1 LIMIT 1)"/>
+            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/>
+            <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'DIR001' LIMIT 1)"/>
+            <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 1 LIMIT 1)"/>
             <column name="code" value="1001"/>
             <column name="name" value="Ahmed Rahman"/>
             <column name="address" value="Gulshan-2, Dhaka"/>
-            <column name="mobile" value="01711123456"/>
+            <column name="mobile" value="+8801711123456"/>
         </insert>
-        
+
         <insert tableName="employees">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="user_id" valueComputed="(SELECT id FROM users WHERE username = 'manager001' LIMIT 1)"/>
-            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/> <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'MGR001' LIMIT 1)"/> <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 2 LIMIT 1)"/>
+            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/>
+            <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'MGR001' LIMIT 1)"/>
+            <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 2 LIMIT 1)"/>
             <column name="code" value="2001"/>
             <column name="name" value="Fatima Khatun"/>
             <column name="address" value="Dhanmondi-15, Dhaka"/>
-            <column name="mobile" value="01711234567"/>
+            <column name="mobile" value="+8801711234567"/>
         </insert>
-        
+
         <insert tableName="employees">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="user_id" valueComputed="(SELECT id FROM users WHERE username = 'senior001' LIMIT 1)"/>
-            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/> <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'SR001' LIMIT 1)"/> <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 3 LIMIT 1)"/>
+            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/>
+            <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'SR001' LIMIT 1)"/>
+            <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 3 LIMIT 1)"/>
             <column name="code" value="3001"/>
             <column name="name" value="Mohammad Ali"/>
             <column name="address" value="Banani, Dhaka"/>
-            <column name="mobile" value="01711345678"/>
+            <column name="mobile" value="+8801711345678"/>
         </insert>
-        
+
         <insert tableName="employees">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="user_id" valueComputed="(SELECT id FROM users WHERE username = 'senior002' LIMIT 1)"/>
-            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/> <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'SR002' LIMIT 1)"/> <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 3 LIMIT 1)"/>
+            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/>
+            <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'SR002' LIMIT 1)"/>
+            <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 3 LIMIT 1)"/>
             <column name="code" value="3002"/>
             <column name="name" value="Rashida Begum"/>
             <column name="address" value="Uttara, Dhaka"/>
-            <column name="mobile" value="01711456789"/>
+            <column name="mobile" value="+8801711456789"/>
         </insert>
-        
+
         <insert tableName="employees">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="user_id" valueComputed="(SELECT id FROM users WHERE username = 'dev001' LIMIT 1)"/>
-            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/> <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'DEV001' LIMIT 1)"/> <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 4 LIMIT 1)"/>
+            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/>
+            <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'DEV001' LIMIT 1)"/>
+            <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 4 LIMIT 1)"/>
             <column name="code" value="4001"/>
             <column name="name" value="Karim Uddin"/>
             <column name="address" value="Mirpur-1, Dhaka"/>
-            <column name="mobile" value="01711567890"/>
+            <column name="mobile" value="+8801711567890"/>
         </insert>
-        
+
         <insert tableName="employees">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="user_id" valueComputed="(SELECT id FROM users WHERE username = 'dev002' LIMIT 1)"/>
-            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/> <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'DEV002' LIMIT 1)"/> <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 4 LIMIT 1)"/>
+            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/>
+            <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'DEV002' LIMIT 1)"/>
+            <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 4 LIMIT 1)"/>
             <column name="code" value="4002"/>
             <column name="name" value="Salma Akter"/>
             <column name="address" value="Wari, Dhaka"/>
-            <column name="mobile" value="01711678901"/>
+            <column name="mobile" value="+8801711678901"/>
         </insert>
-        
+
         <insert tableName="employees">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="user_id" valueComputed="(SELECT id FROM users WHERE username = 'junior001' LIMIT 1)"/>
-            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/> <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'JR001' LIMIT 1)"/> <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 5 LIMIT 1)"/>
+            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/>
+            <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'JR001' LIMIT 1)"/>
+            <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 5 LIMIT 1)"/>
             <column name="code" value="5001"/>
             <column name="name" value="Nasir Ahmed"/>
             <column name="address" value="Tejgaon, Dhaka"/>
-            <column name="mobile" value="01711789012"/>
+            <column name="mobile" value="+8801711789012"/>
         </insert>
-        
+
         <insert tableName="employees">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="user_id" valueComputed="(SELECT id FROM users WHERE username = 'junior002' LIMIT 1)"/>
-            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/> <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'JR002' LIMIT 1)"/> <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 5 LIMIT 1)"/>
+            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/>
+            <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'JR002' LIMIT 1)"/>
+            <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 5 LIMIT 1)"/>
             <column name="code" value="5002"/>
             <column name="name" value="Amina Khanom"/>
             <column name="address" value="Mohammadpur, Dhaka"/>
-            <column name="mobile" value="01711890123"/>
+            <column name="mobile" value="+8801711890123"/>
         </insert>
-        
+
         <insert tableName="employees">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="user_id" valueComputed="(SELECT id FROM users WHERE username = 'intern001' LIMIT 1)"/>
-            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/> <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'INT001' LIMIT 1)"/> <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 6 LIMIT 1)"/>
+            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/>
+            <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'INT001' LIMIT 1)"/>
+            <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 6 LIMIT 1)"/>
             <column name="code" value="6001"/>
             <column name="name" value="Tariq Hassan"/>
             <column name="address" value="Farmgate, Dhaka"/>
-            <column name="mobile" value="01711901234"/>
+            <column name="mobile" value="+8801711901234"/>
         </insert>
-        
+
         <insert tableName="employees">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="user_id" valueComputed="(SELECT id FROM users WHERE username = 'intern002' LIMIT 1)"/>
-            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/> <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'INT002' LIMIT 1)"/> <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 6 LIMIT 1)"/>
+            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/>
+            <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'INT002' LIMIT 1)"/>
+            <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 6 LIMIT 1)"/>
             <column name="code" value="6002"/>
             <column name="name" value="Ruma Parvin"/>
             <column name="address" value="Shantinagar, Dhaka"/>
-            <column name="mobile" value="01712012345"/>
+            <column name="mobile" value="+8801712012345"/>
         </insert>
-        
+
         <rollback>
             <delete tableName="employees">
                 <where>code IN ('1001', '2001', '3001', '3002', '4001', '4002', '5001', '5002', '6001', '6002')</where>

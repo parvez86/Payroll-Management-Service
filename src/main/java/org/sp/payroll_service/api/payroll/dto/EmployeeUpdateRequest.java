@@ -32,7 +32,10 @@ public record EmployeeUpdateRequest(
     @NotBlank @Size(min = 6) String password,
 
     // Example of enforcing validity using a regex pattern
-    @Pattern(regexp = "^(\\([0-9]{3}\\)|[0-9]{3})[-.\\s]?[0-9]{3}[-.\\s]?[0-9]{4}$", message = "Phone number format is invalid.")
+    @Pattern(
+            regexp = "^\\+?[0-9]{7,15}$",
+            message = "Mobile number format is invalid. Use 7 to 15 digits, optionally with a '+' prefix."
+    )
     String phoneNumber,
 
     // Employment Details

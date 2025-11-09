@@ -21,8 +21,8 @@ import java.util.UUID;
  * @param branchId bank branch reference ID
  */
 public record CreateEmployeeRequest(
-        @NotBlank(message = "Business ID is required.")
-        @Pattern(regexp = "\\d{4}", message = "Business ID must be 4 digits.")
+//        @NotBlank(message = "Business ID is required.")
+        @Pattern(regexp = "\\d{4}", message = "Business ID must be 4 digits. (optional)")
         String bizId,
 
         @NotBlank(message = "Name is required.")

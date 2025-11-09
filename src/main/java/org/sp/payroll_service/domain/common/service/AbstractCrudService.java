@@ -2,6 +2,7 @@ package org.sp.payroll_service.domain.common.service;
 
 import org.sp.payroll_service.api.payroll.dto.PageResponse;
 import org.sp.payroll_service.domain.common.entity.BaseEntity;
+import org.sp.payroll_service.domain.common.enums.EntityStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -94,10 +95,10 @@ public abstract class AbstractCrudService<
     @Override
     @Transactional
     public void delete(ID id) {
-        if (!repository.existsById(id)) {
-            throw new ResponseStatusException(NOT_FOUND, entityName + " not found with ID: " + id);
-        }
-        repository.deleteById(id);
+        E entity = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, entityName));
+        entity.setStatus(EntityStatus.DELETED);
+        repository.save(entity);
     }
 
     // --- ADVANCED QUERY IMPLEMENTATIONS ---

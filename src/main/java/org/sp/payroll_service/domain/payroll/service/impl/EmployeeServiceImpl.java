@@ -271,9 +271,9 @@ public class EmployeeServiceImpl extends AbstractCrudService<
     }
 
     private String getBizId() {
-        Integer maxId = employeeRepository.findMaxIdNumber();
+        int maxId = employeeRepository.findMaxIdNumber();
         // Get the next ID (increment by 1)
-        int nextId = (maxId != null) ? maxId + 1 : 1;
+        int nextId = maxId + 1;
         return String.format("%04d", nextId);
     }
 
