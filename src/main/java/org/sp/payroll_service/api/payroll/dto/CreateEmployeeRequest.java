@@ -1,9 +1,6 @@
 package org.sp.payroll_service.api.payroll.dto;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
-import org.sp.payroll_service.api.wallet.dto.CreateAccountRequest;
-
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -14,7 +11,14 @@ import java.util.UUID;
  * @param address residential address
  * @param mobile contact number
  * @param gradeId grade reference ID
- * @param accountRequest bank account details
+ * @param companyId ID of the company the employee belongs to
+ * @param username unique username for login
+ * @param email employee email address
+ * @param password initial password for login
+ * @param accountName bank account holder name
+ * @param accountNumber bank account number
+ * @param overdraftLimit configured overdraft limit
+ * @param branchId bank branch reference ID
  */
 public record CreateEmployeeRequest(
         @NotBlank(message = "Business ID is required.")
@@ -34,8 +38,16 @@ public record CreateEmployeeRequest(
         @NotNull(message = "Grade ID is required.")
         UUID gradeId,
 
+        @NotNull(message = "Company ID is required.")
+        UUID companyId,
+
         @NotBlank @Size(min = 3, max = 50) String username,
-        @Email String email,
+
+        // CORRECTION: Email must be mandatory and validated
+        @NotBlank(message = "Email is required.")
+        @Email(message = "Invalid email format.")
+        String email,
+
         @NotBlank @Size(min = 6) String password,
 
         @NotBlank(message = "Account name (Holder name) is required.")
@@ -44,6 +56,7 @@ public record CreateEmployeeRequest(
 
         // --- Account Number (Validation Refinement) ---
         @NotBlank(message = "Account number is required and unique.")
+        @Pattern(regexp = "[0-9]+", message = "Account number must contain only digits.") // Added pattern for basic numeric check
         @Size(min = 10, max = 38, message = "Account number length is invalid.")
         String accountNumber,
 

@@ -69,7 +69,9 @@ public class JwtAuthenticationFilter implements AuthenticationDelegate {
 
         try {
             // 1. Validate token (will throw InvalidTokenException on failure)
-            tokenProvider.validateToken(jwt);
+            if (!tokenProvider.validateTokenType(jwt, "access")) {
+                throw new InvalidTokenException("Invalid access token type");
+            }
 
             String jti = tokenProvider.getJtiFromToken(jwt);
 

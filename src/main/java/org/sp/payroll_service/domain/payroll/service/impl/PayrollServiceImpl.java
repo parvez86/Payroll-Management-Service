@@ -5,9 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.api.payroll.dto.*;
 import org.sp.payroll_service.api.payroll.mapper.PayrollBatchMapper;
 import org.sp.payroll_service.api.payroll.mapper.PayrollItemMapper;
+import org.sp.payroll_service.domain.auth.entity.UserDetailsImpl;
 import org.sp.payroll_service.domain.common.dto.response.Money;
 import org.sp.payroll_service.domain.common.enums.PayrollItemStatus;
 import org.sp.payroll_service.domain.common.enums.PayrollStatus;
+import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
 import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
 import org.sp.payroll_service.domain.core.entity.Company;
 import org.sp.payroll_service.domain.payroll.entity.Employee;
@@ -28,11 +30,13 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -63,8 +67,16 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     @Transactional
-    public PayrollBatchResponse createPayrollBatch(CreatePayrollBatchRequest request) {
+    public PayrollBatchResponse createPayrollBatch(CreatePayrollBatchRequest request, UserDetails currentUser) {
         log.info("Creating payroll batch: {} for company: {}", request.name(), request.companyId());
+
+        Optional<PayrollBatch> existingPayrollBatch= payrollBatchRepository.findFirstActiveByPayrollStatus(PayrollStatus.PENDING);
+
+        existingPayrollBatch.ifPresent(batch -> {
+            String msg = String.format("Company ID %s already has an active PENDING payroll batch ID %s.",
+                    request.companyId(), batch.getId());
+            throw new DuplicateEntryException(msg);
+        });
 
         // Validate company exists
         Company company = companyRepository.findById(request.companyId())
@@ -80,8 +92,14 @@ public class PayrollServiceImpl implements PayrollService {
                 .payrollMonth(request.payrollMonth())
                 .company(company)
                 .fundingAccountId(request.fundingAccountId())
+                .basicBaseAmount(request.baseSalary())
                 .description(request.description())
                 .build();
+        
+        // Set created_by from authenticated user (if available)
+        if (currentUser instanceof UserDetailsImpl userDetailsImpl) {
+            batch.setCreatedBy(userDetailsImpl.getId());
+        }
 
         PayrollBatch savedBatch = payrollBatchRepository.save(batch);
 
@@ -90,12 +108,13 @@ public class PayrollServiceImpl implements PayrollService {
 
         // Calculate statistics
         Integer employeeCount = getEmployeeCountForBatch(savedBatch.getId());
+        Money basicBaseAmount = Money.of(savedBatch.getBasicBaseAmount());
         Money totalAmount = Money.of(payrollItemRepository.getTotalAmountForBatch(savedBatch.getId()));
 
         log.info("Created payroll batch: {} with {} employees, total amount: {}",
                 savedBatch.getId(), employeeCount, totalAmount);
 
-        return payrollBatchMapper.toResponse(savedBatch, employeeCount, 0, 0, totalAmount, Money.of(BigDecimal.ZERO));
+        return payrollBatchMapper.toResponse(savedBatch, employeeCount, 0, 0, totalAmount, Money.of(BigDecimal.ZERO), basicBaseAmount);
     }
 
     @Override
@@ -115,6 +134,7 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     @Transactional(readOnly = true)
+    @Deprecated
     public List<SalaryCalculation> calculateSalariesForCompany(UUID companyId) {
         log.info("Calculating salaries for company: {}", companyId);
 
@@ -123,10 +143,13 @@ public class PayrollServiceImpl implements PayrollService {
 
         List<Employee> employees = employeeRepository.findAllOrderedByGrade();
         SalaryDistributionFormula formula = company.getSalaryFormula();
+        
+        // Use default base salary for preview (30000 for grade 6)
+        BigDecimal defaultBaseSalary = BigDecimal.valueOf(30000.00);
 
         return employees.stream()
                 .map(employee -> {
-                    PayrollItem item = salaryCalculationService.calculateSalary(employee, formula);
+                    PayrollItem item = salaryCalculationService.calculateSalary(employee, formula, defaultBaseSalary);
                     return payrollItemMapper.toSalaryCalculation(employee, item);
                 })
                 .collect(Collectors.toList());
@@ -195,7 +218,6 @@ public class PayrollServiceImpl implements PayrollService {
                             .description("Salary payment for " + item.getEmployee().getName())
                             .build();
 
-                    // FIX: Assuming executeTransfer is now synchronous
                     transactionService.executeTransfer(transferRequest);
 
                     item.setPayrollItemStatus(PayrollItemStatus.PAID);
@@ -290,16 +312,11 @@ public class PayrollServiceImpl implements PayrollService {
     public PayrollBatchResponse getBatchById(UUID batchId) {
         log.debug("Retrieving payroll batch: {}", batchId);
 
-        PayrollBatch batch = payrollBatchRepository.findById(batchId)
-                .orElseThrow(() -> ResourceNotFoundException.forEntity("PayrollBatch", batchId));
+        Optional<PayrollBatch> batchOptional = payrollBatchRepository.findById(batchId);
 
-        Integer employeeCount = getEmployeeCountForBatch(batchId);
-        Integer successfulPayments = getSuccessfulPaymentCount(batchId);
-        Integer failedPayments = getFailedPaymentCount(batchId);
-        Money totalAmount = Money.of(payrollItemRepository.getTotalAmountForBatch(batchId));
-        Money executedAmount = Money.of(payrollItemRepository.getTotalPaidAmountForBatch(batchId));
-
-        return payrollBatchMapper.toResponse(batch, employeeCount, successfulPayments, failedPayments, totalAmount, executedAmount);
+        return getPayrollBatchResponse(batchOptional).orElseThrow(
+                () -> ResourceNotFoundException.forEntity("PayrollBatch", batchId)
+        );
     }
 
     @Override
@@ -353,8 +370,22 @@ public class PayrollServiceImpl implements PayrollService {
 
         Integer employeeCount = getEmployeeCountForBatch(batchId);
         Money totalAmount = Money.of(payrollItemRepository.getTotalAmountForBatch(batchId));
+        Money basicBaseAmount = Money.of(batch.getBasicBaseAmount());
 
-        return payrollBatchMapper.toResponse(savedBatch, employeeCount, 0, 0, totalAmount, Money.of(BigDecimal.ZERO));
+
+        return payrollBatchMapper.toResponse(savedBatch, employeeCount, 0, 0, totalAmount, Money.of(BigDecimal.ZERO), basicBaseAmount);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PayrollBatchResponse findFirstPendingOrPartialPendingBatch(UUID companyId) {
+        Optional<PayrollBatch> batchOpt = payrollBatchRepository
+                .findFirstByCompanyIdAndPayrollStatusInOrderByCreatedAtAsc(
+                        companyId,
+                        List.of(PayrollStatus.PENDING, PayrollStatus.PARTIALLY_COMPLETED)
+                );
+        return getPayrollBatchResponse(batchOpt).orElse(null);
+
     }
 
     // --- Helper Methods ---
@@ -362,14 +393,15 @@ public class PayrollServiceImpl implements PayrollService {
     private void generatePayrollItems(PayrollBatch batch) {
         List<Employee> employees = employeeRepository.findAllOrderedByGrade();
         SalaryDistributionFormula formula = batch.getCompany().getSalaryFormula();
+        BigDecimal batchBaseSalary = batch.getBasicBaseAmount(); // Get base salary from batch input
 
         for (Employee employee : employees) {
-            PayrollItem item = salaryCalculationService.calculateSalary(employee, formula);
+            PayrollItem item = salaryCalculationService.calculateSalary(employee, formula, batchBaseSalary);
             item.setPayrollBatch(batch);
             payrollItemRepository.save(item);
         }
 
-        log.info("Generated {} payroll items for batch {}", employees.size(), batch.getId());
+        log.info("Generated {} payroll items for batch {} with base salary {}", employees.size(), batch.getId(), batchBaseSalary);
     }
 
     private Specification<PayrollBatch> createSpecification(PayrollBatchFilter filter) {
@@ -410,5 +442,20 @@ public class PayrollServiceImpl implements PayrollService {
 
     private Integer getFailedPaymentCount(UUID batchId) {
         return Math.toIntExact(payrollItemRepository.countByBatchIdAndStatus(batchId, PayrollItemStatus.FAILED));
+    }
+
+    private Optional<PayrollBatchResponse> getPayrollBatchResponse(Optional<PayrollBatch> batchOptional) {
+        return batchOptional.map(
+                batch -> {
+                    Integer employeeCount = getEmployeeCountForBatch(batch.getId());
+                    Integer successfulPayments = getSuccessfulPaymentCount(batch.getId());
+                    Integer failedPayments = getFailedPaymentCount(batch.getId());
+                    Money totalAmount = Money.of(payrollItemRepository.getTotalAmountForBatch(batch.getId()));
+                    Money executedAmount = Money.of(payrollItemRepository.getTotalPaidAmountForBatch(batch.getId()));
+                    Money basicBaseAmount = Money.of(batch.getBasicBaseAmount());
+
+                    return payrollBatchMapper.toResponse(batch, employeeCount, successfulPayments, failedPayments, totalAmount, executedAmount, basicBaseAmount);
+                }
+        );
     }
 }

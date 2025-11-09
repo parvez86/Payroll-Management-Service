@@ -10,5 +10,6 @@
     <include file="db/changelog/change/002-create-payroll-tables.xml"/>
     <include file="db/changelog/change/003-create-indexes.xml"/>
     <include file="db/changelog/change/004-insert-seed-data.xml"/>
+    <include file="db/changelog/change/005-add-basic-salary-payroll-tables.xml"/>
 
 </databaseChangeLog>

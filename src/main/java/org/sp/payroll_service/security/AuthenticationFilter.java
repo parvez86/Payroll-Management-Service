@@ -47,15 +47,15 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 
     // ✅ SINGLE SOURCE OF TRUTH (defined here for self-containment)
     private static final List<String> PUBLIC_ENDPOINTS = Arrays.asList(
-            "/api/v1/auth/login",
-            "/api/v1/auth/register",
-            "/api/v1/auth/refresh",
-            "/api/v1/actuator/**",
-            "/api/v1/health",
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-resources/**",
-            "/webjars/**"
+            "pms/api/v1/auth/login",
+            "pms/api/v1/auth/register",
+            "pms/api/v1/auth/refresh",
+            "pms/api/v1/actuator/**",
+            "pms/api/v1/health",
+            "pms/v3/api-docs/**",
+            "pms/swagger-ui/**",
+            "pms/swagger-resources/**",
+            "pms/webjars/**"
     );
 
     /**

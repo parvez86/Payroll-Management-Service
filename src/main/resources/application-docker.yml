@@ -68,7 +68,7 @@ spring:
 # Application Configuration
 app:
   jwt:
-    header-prefix: Bearer
+    header-prefix: "Bearer "
     secret: ${JWT_SECRET:DockerSecretKeyForPayrollSystemProduction2024}
     expiration: 86400000
     issuer: PayrollManagementSystem

@@ -6,6 +6,7 @@ import org.sp.payroll_service.domain.common.dto.response.AuditInfo;
 import org.sp.payroll_service.domain.common.dto.response.Money;
 import org.sp.payroll_service.domain.common.enums.PayrollStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -33,6 +34,9 @@ public record PayrollBatchResponse(
     
     @Schema(description = "Total amount executed successfully")
     Money executedAmount,
+
+    @Schema(description = "Total amount executed successfully")
+    Money basicBaseAmount,
     
     @Schema(description = "Company ID associated with this batch")
     UUID companyId,

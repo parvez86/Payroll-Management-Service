@@ -296,9 +296,9 @@ public class CompanyServiceImpl extends AbstractCrudService<
                 .auditInfo(AuditInfo.builder()
                         .version(transaction.getVersion())
                         .createdAt(transaction.getCreatedAt())
-                        .createdBy(transaction.getCreatedBy().toString())
+                        .createdBy(transaction.getCreatedBy() != null?transaction.getCreatedBy().toString():null)
                         .lastModifiedAt(transaction.getUpdatedAt())
-                        .lastModifiedBy(transaction.getUpdatedBy().toString())
+                        .lastModifiedBy(transaction.getUpdatedBy() != null?transaction.getUpdatedBy().toString():null)
                         .build())
                 .build());
     }

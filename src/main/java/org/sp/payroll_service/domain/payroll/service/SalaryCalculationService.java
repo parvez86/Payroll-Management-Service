@@ -27,15 +27,20 @@ public class SalaryCalculationService {
      * HRA = Basic × 20%
      * Medical = Basic × 15%
      * Gross = Basic + HRA + Medical
+     * 
+     * @param employee The employee for whom salary is calculated
+     * @param formula The salary distribution formula to use
+     * @param baseSalary The base salary for the lowest grade (e.g., Grade 6)
+     * @return PayrollItem with calculated salary components
      */
-    public PayrollItem calculateSalary(Employee employee, SalaryDistributionFormula formula) {
-        log.debug("Calculating salary for employee: {} with grade: {}", 
-                employee.getCode(), employee.getGrade().getName());
+    public PayrollItem calculateSalary(Employee employee, SalaryDistributionFormula formula, BigDecimal baseSalary) {
+        log.debug("Calculating salary for employee: {} with grade: {} using base salary: {}", 
+                employee.getCode(), employee.getGrade().getName(), baseSalary);
 
         Grade grade = employee.getGrade();
         
-        // Calculate basic salary using the formula
-        BigDecimal basicSalary = calculateBasicSalary(grade, formula);
+        // Calculate basic salary using the formula and provided base salary
+        BigDecimal basicSalary = calculateBasicSalary(grade, formula, baseSalary);
         
         // Calculate allowances
         BigDecimal hra = basicSalary
@@ -68,29 +73,27 @@ public class SalaryCalculationService {
     }
 
     /**
-     * Calculate basic salary for a grade using the formula.
-     * Formula: Basic(Grade) = Grade6Base + (6 - GradeNumber) × IncrementAmount
+     * Calculate basic salary for a grade using the formula and provided base salary.
+     * Formula: Basic(Grade) = BaseSalary + (BaseSalaryGrade - GradeNumber) × IncrementAmount
+     * 
+     * @param grade The employee's grade
+     * @param formula The salary distribution formula
+     * @param baseSalary The base salary for the lowest grade (from batch input)
+     * @return Calculated basic salary for the given grade
      */
-    private BigDecimal calculateBasicSalary(Grade grade, SalaryDistributionFormula formula) {
-        // Get the base salary for the lowest grade (typically grade 6)
-        BigDecimal baseSalary = getBaseSalaryForGrade(formula.getBaseSalaryGrade(), formula);
+    private BigDecimal calculateBasicSalary(Grade grade, SalaryDistributionFormula formula, BigDecimal baseSalary) {
+        // Validate base salary is provided
+        if (baseSalary == null || baseSalary.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Base salary must be provided and greater than zero");
+        }
         
         // Calculate increment based on grade difference
+        // Higher grades (lower rank numbers) get higher salaries
         int gradeDifference = formula.getBaseSalaryGrade() - grade.getRank();
         BigDecimal increment = formula.getGradeIncrementAmount()
                 .multiply(BigDecimal.valueOf(gradeDifference));
         
         return baseSalary.add(increment).setScale(2, RoundingMode.HALF_UP);
-    }
-
-    /**
-     * Get base salary for the specified grade.
-     * This could be configurable in the future.
-     */
-    private BigDecimal getBaseSalaryForGrade(Integer gradeNumber, SalaryDistributionFormula formula) {
-        // For now, assume a base amount for grade 6
-        // This could be made configurable or stored in the formula
-        return BigDecimal.valueOf(30000.00); // Base salary for grade 6
     }
 
     /**

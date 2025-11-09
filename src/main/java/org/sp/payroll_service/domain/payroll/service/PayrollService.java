@@ -5,10 +5,10 @@ import org.sp.payroll_service.domain.payroll.exception.InsufficientFundsExceptio
 import org.sp.payroll_service.domain.payroll.exception.PayrollProcessingException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Service interface for payroll processing operations.
@@ -21,7 +21,7 @@ public interface PayrollService {
      * @param request batch creation data
      * @return created batch details
      */
-    PayrollBatchResponse createPayrollBatch(CreatePayrollBatchRequest request);
+    PayrollBatchResponse createPayrollBatch(CreatePayrollBatchRequest request, UserDetails currentUser);
     
     /**
      * Calculates salaries for all employees without executing transfers.
@@ -35,6 +35,7 @@ public interface PayrollService {
      * @param companyId company identifier
      * @return salary calculations for all employees
      */
+    @Deprecated
     List<SalaryCalculation> calculateSalariesForCompany(UUID companyId);
     
     /**
@@ -83,4 +84,10 @@ public interface PayrollService {
      * @return updated batch response
      */
     PayrollBatchResponse cancelBatch(UUID batchId);
+    /**
+     * Finds the first pending or partial pending payroll batch for a company.
+     * @param companyId company identifier
+     * @return batch details or null if not found
+     */
+    PayrollBatchResponse findFirstPendingOrPartialPendingBatch(UUID companyId);
 }

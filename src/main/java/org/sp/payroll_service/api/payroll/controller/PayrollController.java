@@ -18,10 +18,13 @@ import org.sp.payroll_service.api.payroll.dto.SalaryCalculation;
 import org.sp.payroll_service.domain.payroll.service.PayrollService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -42,7 +45,23 @@ public class PayrollController {
 
     private final PayrollService payrollService;
 
-    // --- BATCH MANAGEMENT ---
+        @Operation(summary = "Get first pending or partial pending payroll batch for a company")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Payroll batch found"),
+                        @ApiResponse(responseCode = "404", description = "No pending batch found"),
+                        @ApiResponse(responseCode = "403", description = "Access denied")
+        })
+        @GetMapping("/companies/{companyId}/pending-batch")
+        @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+        public ResponseEntity<PayrollBatchResponse> getFirstPendingOrPartialPendingBatch(
+                        @Parameter(description = "Company ID") @PathVariable("companyId") UUID companyId) {
+                PayrollBatchResponse batch = payrollService.findFirstPendingOrPartialPendingBatch(companyId);
+                if (batch != null) {
+                        return ResponseEntity.ok(batch);
+                } else {
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+                }
+        }
 
     @Operation(summary = "Create a new payroll batch")
     @ApiResponses(value = {
@@ -53,9 +72,10 @@ public class PayrollController {
     @PostMapping("/batches")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PayrollBatchResponse> createBatch(
-            @Valid @RequestBody CreatePayrollBatchRequest request) {
+            @Valid @RequestBody CreatePayrollBatchRequest request,
+            @AuthenticationPrincipal UserDetails currentUser) {
         log.info("Creating new payroll batch: {}", request.name());
-        PayrollBatchResponse batch = payrollService.createPayrollBatch(request);
+        PayrollBatchResponse batch = payrollService.createPayrollBatch(request, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(batch);
     }
 
@@ -68,7 +88,7 @@ public class PayrollController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<Page<PayrollBatchSummary>> getAllBatches(
             @Parameter(description = "Filter criteria") @ModelAttribute PayrollBatchFilter filter,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         log.debug("Retrieving payroll batches with filter: {}", filter);
         return ResponseEntity.ok(payrollService.getAllBatches(filter, pageable));
     }
@@ -97,7 +117,7 @@ public class PayrollController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<Page<PayrollItemResponse>> getBatchItems(
             @Parameter(description = "Payroll batch ID") @PathVariable UUID batchId,
-            @PageableDefault(size = 50) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "basics", direction = Sort.Direction.DESC) Pageable pageable) {
         log.debug("Retrieving payroll items for batch: {}", batchId);
         return ResponseEntity.ok(payrollService.getBatchItems(batchId, pageable));
     }
@@ -126,6 +146,7 @@ public class PayrollController {
     })
     @GetMapping("/companies/{companyId}/calculate")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+    @Deprecated
     public ResponseEntity<List<SalaryCalculation>> calculateSalariesForCompany(
             @Parameter(description = "Company ID") @PathVariable UUID companyId) {
         log.info("Calculating salaries for company: {}", companyId);

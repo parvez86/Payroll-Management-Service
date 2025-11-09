@@ -13,12 +13,18 @@ COPY src/ src/
 # Build the application
 RUN gradle clean build -x test --no-daemon
 
+
 # Runtime stage
-FROM openjdk:24-jdk-slim
+FROM debian:bullseye-slim
 
 LABEL maintainer="payroll-team@techcorp.com"
 LABEL version="1.0.0"
 LABEL description="Payroll Management System Backend"
+
+# Copy local JDK 24 from build context (must be present in project root as 'jdk-24')
+COPY jdk-24 /usr/local/openjdk-24
+ENV JAVA_HOME=/usr/local/openjdk-24
+ENV PATH="$JAVA_HOME/bin:$PATH"
 
 # Create app user for security
 RUN groupadd -r payroll && useradd -r -g payroll payroll

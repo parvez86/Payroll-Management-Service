@@ -1,10 +1,12 @@
 package org.sp.payroll_service.api.payroll.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -32,5 +34,10 @@ public record CreatePayrollBatchRequest(
     UUID fundingAccountId,
     
     @Schema(description = "Optional description for the payroll batch")
-    String description
+    String description,
+
+    @NotNull(message = "Base salary for the lowest grade is required")
+    @DecimalMin(value = "0.01", message = "Base salary must be greater than zero")
+    @Schema(description = "Base salary for the lowest grade (Grade 6)", example = "30000.00", required = true)
+    BigDecimal baseSalary
 ) {}

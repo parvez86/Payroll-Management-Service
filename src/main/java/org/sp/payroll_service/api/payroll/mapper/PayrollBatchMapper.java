@@ -14,7 +14,7 @@ public class PayrollBatchMapper {
 
     public PayrollBatchResponse toResponse(PayrollBatch batch, Integer employeeCount, 
                                          Integer successfulPayments, Integer failedPayments,
-                                         Money totalAmount, Money executedAmount) {
+                                         Money totalAmount, Money executedAmount, Money basicBaseAmount) {
         return PayrollBatchResponse.builder()
                 .id(batch.getId())
                 .name(batch.getName())
@@ -22,6 +22,7 @@ public class PayrollBatchMapper {
                 .payrollStatus(batch.getPayrollStatus())
                 .totalAmount(totalAmount)
                 .executedAmount(executedAmount)
+                .basicBaseAmount(basicBaseAmount)
                 .companyId(batch.getCompany() != null ? batch.getCompany().getId() : null)
                 .companyName(batch.getCompany() != null ? batch.getCompany().getName() : null)
                 .fundingAccountId(batch.getFundingAccountId())

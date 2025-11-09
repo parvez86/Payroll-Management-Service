@@ -5,6 +5,8 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.domain.common.dto.response.ErrorResponse;
 import org.sp.payroll_service.domain.common.exception.*; // Assuming your custom exceptions are here
+import org.sp.payroll_service.domain.payroll.exception.InsufficientFundsException;
+import org.sp.payroll_service.domain.payroll.exception.PayrollProcessingException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -293,7 +295,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     /**
      * Handles Spring Security's generic {@link InsufficientAuthenticationException} (missing token). (HTTP 401).
      */
-    @ExceptionHandler(InsufficientAuthenticationException.class)
+    @ExceptionHandler({InsufficientAuthenticationException.class})
     public ResponseEntity<ErrorResponse> handleInsufficientAuthenticationException(
             InsufficientAuthenticationException ex,
             WebRequest request) {
@@ -309,6 +311,48 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         log.warn("Insufficient authentication: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
+    /**
+     * Handles Spring Security's generic {@link InsufficientFundsException} (HTTP 400).
+     */
+    @ExceptionHandler({InsufficientFundsException.class})
+    public ResponseEntity<ErrorResponse> handleInsufficientFundsException(
+            InsufficientFundsException ex,
+            WebRequest request) {
+
+        ErrorResponse errorResponse = getErrorResponse(
+                ErrorCodes.PAYROLL_INSUFFICIENT_FUND,
+                ex.getMessage(),
+                ex.getCategory(),
+                getRequestPath(request),
+                Map.of(),
+                null
+        );
+
+        log.warn("Insufficient authentication: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    /**
+     * Handles Spring Security's generic {@link PayrollProcessingException} (HTTP 400).
+     */
+    @ExceptionHandler({PayrollProcessingException.class})
+    public ResponseEntity<ErrorResponse> handlePayrollProcessingException(
+            PayrollProcessingException ex,
+            WebRequest request) {
+
+        ErrorResponse errorResponse = getErrorResponse(
+                ErrorCodes.PAYROLL_PROCESS_ERROR,
+                ex.getMessage(),
+                ex.getCategory(),
+                getRequestPath(request),
+                Map.of(),
+                null
+        );
+
+        log.warn("Insufficient authentication: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
     /**

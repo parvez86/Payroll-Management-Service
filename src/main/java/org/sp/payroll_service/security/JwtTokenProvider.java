@@ -1,7 +1,6 @@
 package org.sp.payroll_service.security;
 
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +8,7 @@ import org.sp.payroll_service.domain.auth.entity.User;
 import org.sp.payroll_service.domain.common.exception.InvalidTokenException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
@@ -34,6 +34,9 @@ public class JwtTokenProvider {
     private long refreshTokenExpirationInMs;
 
     private SecretKey key;
+
+    @Value("${app.jwt.header-prefix:Bearer }")
+    private String tokenPrefix;
 
     /**
      * Retrieves the signing key, creating it from the base64 secret if necessary.
@@ -210,6 +213,8 @@ public class JwtTokenProvider {
      */
     public boolean validateTokenType(String token, String expectedType) {
         String tokenType = getTokenType(token);
+        log.error("🔍 [Validate Token Type] === GET Token Type ===");
+        log.error("🔍 expectedType: {} tokenType: {}", expectedType, tokenType);
         return expectedType.equals(tokenType);
     }
 
@@ -251,5 +256,12 @@ public class JwtTokenProvider {
             // Re-throw as a business-specific exception
             throw new InvalidTokenException("Validation failure during claims extraction", ex);
         }
+    }
+
+    public String extractJwt(String bearerToken) {
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(tokenPrefix)) {
+            return bearerToken.substring(tokenPrefix.length());
+        }
+        return bearerToken;
     }
 }

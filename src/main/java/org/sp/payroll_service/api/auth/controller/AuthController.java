@@ -158,7 +158,7 @@ public class AuthController {
 
     /**
      * Get current user details from JWT token.
-     * @param token JWT access token from Authorization header
+     * @param currentUser current user details
      * @return current user's detailed information
      */
     @GetMapping("/me")

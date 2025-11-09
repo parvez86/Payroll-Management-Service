@@ -60,6 +60,10 @@ public final class ErrorCodes {
     public static final String USER_INVALID_EMAIL = "71002";
     public static final String USER_INVALID_PHONE = "71003";
 
+    // payroll management
+    public static final String PAYROLL_INSUFFICIENT_FUND = "81001";
+    public static final String PAYROLL_PROCESS_ERROR = "81002";
+
 
     
     // Validation Messages

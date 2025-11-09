@@ -58,11 +58,18 @@ public class PayrollBatch extends BaseEntity {
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
     /**
-     * Total amount for this payroll batch.
+     * Executed amount for this payroll batch.
      */
     @Column(name = "executed_amount", nullable = false, precision = 15, scale = 2)
     @Builder.Default
     private BigDecimal executedAmount = BigDecimal.ZERO;
+
+    /**
+     * Executed amount for this payroll batch.
+     */
+    @Column(name = "basic_base_amount", nullable = false, precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal basicBaseAmount = BigDecimal.ZERO;
 
     /**
      * Timestamp when the payroll batch was executed.

@@ -39,7 +39,7 @@ public abstract class BaseAuditingEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @CreatedBy
+    // @CreatedBy - Disabled for now, can be populated manually if needed
     @Column(name = "created_by", updatable = false)
     private UUID createdBy;
 
@@ -47,7 +47,7 @@ public abstract class BaseAuditingEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @LastModifiedBy
+    // @LastModifiedBy - Disabled for now, can be populated manually if needed
     @Column(name = "updated_by")
     private UUID updatedBy;
 }

@@ -15,6 +15,7 @@ import org.sp.payroll_service.domain.common.exception.AuthenticationException;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
 import org.sp.payroll_service.domain.auth.entity.UserDetailsImpl;
 import org.sp.payroll_service.domain.common.exception.ErrorCodes;
+import org.sp.payroll_service.domain.common.exception.InvalidTokenException;
 import org.sp.payroll_service.repository.UserRepository;
 import org.sp.payroll_service.security.JwtTokenProvider;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,7 +24,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.UUID;
 import java.util.Optional;
 
@@ -129,15 +129,16 @@ public class JwtAuthenticationService implements AuthenticationService {
     @Override
     @Transactional(readOnly = true)
     public UserDetails validateToken(String token) {
-        tokenProvider.validateToken(token);
+//        tokenProvider.validateToken(token);
 
-        // Additional validation for access tokens - check if token is revoked via JTI
-        if (tokenProvider.validateTokenType(token, "access")) {
-            String jti = tokenProvider.getJtiFromToken(token);
-            if (jti != null && tokenInfoService.isRevoked(jti)) {
-                // If a token's JTI is found as revoked in the database, reject it.
-                throw new AuthenticationException("Token has been revoked", ErrorCodes.AUTH_TOKEN_REVOKED);
-            }
+        if (!tokenProvider.validateTokenType(token, "access")) {
+            throw new InvalidTokenException("Invalid access token");
+        }
+
+        String jti = tokenProvider.getJtiFromToken(token);
+        if (jti != null && tokenInfoService.isRevoked(jti)) {
+            // If a token's JTI is found as revoked in the database, reject it.
+            throw new AuthenticationException("Token has been revoked", ErrorCodes.AUTH_TOKEN_REVOKED);
         }
 
         UUID userId = tokenProvider.getUserIdFromJWT(token);
@@ -159,11 +160,11 @@ public class JwtAuthenticationService implements AuthenticationService {
      */
     @Override
     public AuthResponse refreshToken(RefreshTokenRequest request) {
-        String oldRefreshToken = request.refreshToken();
+        String oldRefreshToken = tokenProvider.extractJwt(request.refreshToken());
 
         // 1. Validate refresh token type
         if (!tokenProvider.validateTokenType(oldRefreshToken, "refresh")) {
-            throw new AuthenticationException("Invalid refresh token type", ErrorCodes.AUTH_INVALID_TOKEN);
+            throw new AuthenticationException("Invalid refresh token", ErrorCodes.AUTH_INVALID_TOKEN);
         }
 
         // 2. Validate refresh token in database (checks expiry, revocation, and transactionStatus)
@@ -198,18 +199,31 @@ public class JwtAuthenticationService implements AuthenticationService {
      */
     @Override
     public void logout(LogoutRequest request) {
-        String refreshToken = request.refreshToken();
+        String refreshToken = tokenProvider.extractJwt(request.refreshToken());
 
-        Optional<TokenInfo> tokenInfoOptional = tokenInfoService.findValidRefreshToken(refreshToken);
+        if(!tokenProvider.validateTokenType(refreshToken, "refresh")) {
+            log.warn("Logout attempt failed: Provided token was not of 'refresh' type.");
+            throw new AuthenticationException("Invalid token type provided for logout. Must be a refresh token.",
+                    ErrorCodes.AUTH_INVALID_TOKEN);
+        }
+
+        Optional<TokenInfo> tokenInfoOptional = tokenInfoService.findByRefreshToken(refreshToken);
 
         TokenInfo tokenInfo = tokenInfoOptional
-                .orElseThrow(() -> new AuthenticationException("Invalid refresh token provided for logout.", ErrorCodes.AUTH_INVALID_TOKEN));
+                .orElseThrow(() -> {
+                    log.warn("Logout attempt failed: Refresh token not found in database or already revoked.");
+                    return new AuthenticationException("Invalid refresh token provided for logout (not found or invalid).",
+                            ErrorCodes.AUTH_INVALID_TOKEN);
+                });
+
+        User user = tokenInfo.getUser();
 
         if (request.logoutFromAllDevices()) {
-            // Revoke all tokens for the user, regardless of expiry transactionStatus
-            tokenInfoService.revokeAllTokensForUser(tokenInfo.getUser());
+            log.info("USER LOGOUT: Revoking ALL refresh tokens for user ID: {}", user.getId());
+            tokenInfoService.revokeAllTokensForUser(user);
         } else {
-            // Revoke only this specific token
+            log.info("USER LOGOUT: Revoking single refresh token (JTI: {}) for user ID: {}",
+                    tokenInfo.getAccessJti(), user.getId());
             tokenInfoService.revokeTokenByRefreshToken(tokenInfo.getRefreshToken());
         }
     }

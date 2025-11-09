@@ -8,6 +8,7 @@ import org.sp.payroll_service.api.payroll.dto.*;
 import org.sp.payroll_service.api.wallet.dto.AccountResponse;
 import org.sp.payroll_service.domain.auth.entity.User;
 import org.sp.payroll_service.domain.common.enums.AccountType;
+import org.sp.payroll_service.domain.common.enums.EntityStatus;
 import org.sp.payroll_service.domain.common.enums.OwnerType;
 import org.sp.payroll_service.domain.common.enums.Role;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
@@ -113,7 +114,7 @@ public class EmployeeServiceImpl extends AbstractCrudService<
         }
 
         if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw DuplicateEntryException.forEntity("Email", "email", request.username());
+            throw DuplicateEntryException.forEntity("Email", "email", request.email());
         }
 
         if (employeeRepository.findByCode(request.bizId()).isPresent()) {
@@ -127,7 +128,7 @@ public class EmployeeServiceImpl extends AbstractCrudService<
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("Grade", request.gradeId()));
 
         // Company is required
-        companyRepository.findAll().stream().findFirst()
+        companyRepository.findByIdAndStatus(request.companyId(), EntityStatus.ACTIVE)
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("Company", "default"));
 
         // Delegation to super.create will trigger mapToEntity() for final object assembly and persistence
@@ -171,9 +172,9 @@ public class EmployeeServiceImpl extends AbstractCrudService<
                 userUpdated = true;
             }
             
-            if (userUpdated) {
-                userRepository.save(existingEmployee.getUser());
-            }
+//            if (userUpdated) {
+//                userRepository.save(existingEmployee.getUser());
+//            }
         }
 
         // 3. Handle Account updates
@@ -202,9 +203,9 @@ public class EmployeeServiceImpl extends AbstractCrudService<
                 accountUpdated = true;
             }
             
-            if (accountUpdated) {
-                accountRepository.save(existingEmployee.getAccount());
-            }
+//            if (accountUpdated) {
+//                accountRepository.save(existingEmployee.getAccount());
+//            }
         }
 
         // 4. Delegate to abstract base class for simple field mapping and final save
@@ -216,8 +217,11 @@ public class EmployeeServiceImpl extends AbstractCrudService<
     @Override
     protected Employee mapToEntity(CreateEmployeeRequest creationRequest) {
         // Fetch entities (assuming lookups are successful based on checks in create())
-        Grade grade = gradeRepository.findById(creationRequest.gradeId()).get();
-        Company company = companyRepository.findAll().stream().findFirst().get();
+        Grade grade = gradeRepository.findById(creationRequest.gradeId())
+                .orElseThrow(() -> ResourceNotFoundException.forEntity("Grade", creationRequest.gradeId()));
+
+        Company company = companyRepository.findByIdAndStatus(creationRequest.companyId(), EntityStatus.ACTIVE)
+                .orElseThrow(() -> ResourceNotFoundException.forEntity("Company", creationRequest.companyId()));
 
         // 1. Create and save User first
         User user = User
@@ -477,7 +481,7 @@ public class EmployeeServiceImpl extends AbstractCrudService<
 
             if (filter.status() != null) {
                 // If filter.status() maps to the same enum/type as entity.transactionStatus, this is fine.
-                predicates.add(cb.equal(root.get("transactionStatus"), filter.status()));
+                predicates.add(cb.equal(root.get("status"), filter.status()));
             }
 
             if (filter.companyId() != null) {
