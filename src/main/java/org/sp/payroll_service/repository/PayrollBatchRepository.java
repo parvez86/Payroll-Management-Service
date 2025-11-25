@@ -1,5 +1,6 @@
 package org.sp.payroll_service.repository;
 
+import org.sp.payroll_service.domain.common.enums.EntityStatus;
 import org.sp.payroll_service.domain.common.enums.PayrollStatus;
 import org.sp.payroll_service.domain.payroll.entity.PayrollBatch;
 import org.sp.payroll_service.domain.common.repository.BaseRepository;
@@ -73,4 +74,16 @@ public interface PayrollBatchRepository extends BaseRepository<PayrollBatch, UUI
      */
     @Query("SELECT pb FROM PayrollBatch pb WHERE pb.company.id = :companyId AND pb.payrollStatus IN :statuses ORDER BY pb.createdAt ASC")
     Optional<PayrollBatch> findFirstByCompanyIdAndPayrollStatusInOrderByCreatedAtAsc(@Param("companyId") UUID companyId, @Param("statuses") List<PayrollStatus> statuses);
+
+    /**
+     * Finds the last active (not DELETED) {@link PayrollBatch} belonging to a specific company
+     * * The search is ordered by the creation date in ascending order, ensuring the oldest matching
+     * batch is returned first.
+     *
+     * @param companyId The unique identifier (UUID) of the company the batch belongs to.
+     * @return An {@link Optional} containing the oldest matching {@link PayrollBatch},
+     * or {@link Optional#empty()} if no matching batch is found.
+     */
+    @Query("SELECT pb FROM PayrollBatch pb JOIN FETCH pb.company WHERE pb.company.id = :companyId AND pb.status = :activeEntityStatus ORDER BY pb.createdAt DESC")
+    Optional<PayrollBatch> findLastPayrollBatchCompanyIdqByCreatedAtDesc(@Param("companyId") UUID companyId, @Param("activeEntityStatus") EntityStatus activeEntityStatus);
 }

@@ -66,10 +66,11 @@ public interface PayrollService {
     /**
      * Retrieves payroll items for a specific batch.
      * @param batchId batch identifier
+     * @param employeeId employee identifier
      * @param pageable pagination parameters
      * @return paginated payroll items
      */
-    Page<PayrollItemResponse> getBatchItems(UUID batchId, Pageable pageable);
+    Page<PayrollItemResponse> getBatchItems(UUID batchId, UUID employeeId, Pageable pageable);
     
     /**
      * Retries a failed payroll item.
@@ -84,10 +85,18 @@ public interface PayrollService {
      * @return updated batch response
      */
     PayrollBatchResponse cancelBatch(UUID batchId);
+
     /**
      * Finds the first pending or partial pending payroll batch for a company.
      * @param companyId company identifier
      * @return batch details or null if not found
      */
     PayrollBatchResponse findFirstPendingOrPartialPendingBatch(UUID companyId);
+
+    /**
+     * Finds the first pending or partial pending payroll batch for a company.
+     * @param companyId company identifier
+     * @return batch details or null if not found
+     */
+    PayrollBatchResponse getLastPayrollBatchByIdAndEmployeeId(UUID companyId);
 }

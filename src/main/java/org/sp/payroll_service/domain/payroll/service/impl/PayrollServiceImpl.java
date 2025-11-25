@@ -7,6 +7,7 @@ import org.sp.payroll_service.api.payroll.mapper.PayrollBatchMapper;
 import org.sp.payroll_service.api.payroll.mapper.PayrollItemMapper;
 import org.sp.payroll_service.domain.auth.entity.UserDetailsImpl;
 import org.sp.payroll_service.domain.common.dto.response.Money;
+import org.sp.payroll_service.domain.common.enums.EntityStatus;
 import org.sp.payroll_service.domain.common.enums.PayrollItemStatus;
 import org.sp.payroll_service.domain.common.enums.PayrollStatus;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
@@ -34,10 +35,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -321,14 +319,14 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PayrollItemResponse> getBatchItems(UUID batchId, Pageable pageable) {
-        log.debug("Retrieving payroll items for batch: {}", batchId);
+    public Page<PayrollItemResponse> getBatchItems(UUID batchId, UUID employeeId, Pageable pageable) {
+        log.debug("Retrieving payroll items for batch: {} employeeId: {}", batchId, employeeId);
 
         // Verify batch exists
         payrollBatchRepository.findById(batchId)
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("PayrollBatch", batchId));
 
-        Page<PayrollItem> itemPage = payrollItemRepository.findByPayrollBatchId(batchId, pageable);
+        Page<PayrollItem> itemPage = payrollItemRepository.findByPayrollBatch_IdAndEmployee_Id(batchId, employeeId, pageable);
         return itemPage.map(payrollItemMapper::toResponse);
     }
 
@@ -386,6 +384,14 @@ public class PayrollServiceImpl implements PayrollService {
                 );
         return getPayrollBatchResponse(batchOpt).orElse(null);
 
+    }
+
+    @Override
+    public PayrollBatchResponse getLastPayrollBatchByIdAndEmployeeId(UUID companyId) {
+
+        Optional<PayrollBatch> payrollBatchOptional = payrollBatchRepository.findLastPayrollBatchCompanyIdqByCreatedAtDesc(companyId, EntityStatus.ACTIVE);
+        return getPayrollBatchResponse(payrollBatchOptional)
+                .orElse(null);
     }
 
     // --- Helper Methods ---

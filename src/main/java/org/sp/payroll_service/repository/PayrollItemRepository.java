@@ -38,6 +38,11 @@ public interface PayrollItemRepository extends BaseRepository<PayrollItem, UUID>
     List<PayrollItem> findByPayrollBatchIdAndPayrollItemStatus(UUID batchId, PayrollItemStatus status);
 
     /**
+     * Find paginated payroll items for a specific batch.
+     */
+    Page<PayrollItem> findByPayrollBatch_IdAndEmployee_Id(UUID batchId, UUID employeeId, Pageable pageable);
+
+    /**
      * Finds the latest active Payroll Item for a specific Employee ID.
      * Assumes a composite key or a unique constraint on (Employee ID, Batch ID) might exist,
      * but this method specifically targets the most recent item for display.
@@ -45,6 +50,17 @@ public interface PayrollItemRepository extends BaseRepository<PayrollItem, UUID>
      * @return Optional PayrollItem entity
      */
     Optional<PayrollItem> findFirstByEmployeeIdOrderByCreatedAtDesc(UUID employeeId);
+
+    /**
+     * Finds the latest active Payroll Item for a specific Employee ID.
+     * Assumes a composite key or a unique constraint on (Employee ID, Batch ID) might exist,
+     * but this method specifically targets the most recent item for display.
+     * @param batchId The ID of the payroll batch
+     * @param employeeId The ID of the employee
+     * @return Optional PayrollItem entity
+     */
+    Optional<PayrollItem> findFirstByPayrollBatch_IdAndEmployee_IdOrderByCreatedAtDesc(UUID batchId, UUID employeeId);
+
 
     /**
      * Find all payroll items for a specific employee.

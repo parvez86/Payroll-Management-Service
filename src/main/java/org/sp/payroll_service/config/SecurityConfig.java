@@ -63,8 +63,8 @@ public class SecurityConfig {
                         // ✅ Auth endpoints (POST only)
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
                         
-                        // ✅ Actuator endpoints (all methods)
-                        .requestMatchers("/actuator/**").permitAll()
+                        // ✅ Actuator endpoints (all methods) - all path variants
+                        .requestMatchers("/actuator/**", "/pms/actuator/**", "/v1/api/actuator/**", "/api/v1/actuator/**", "/pms/v1/api/actuator/**", "/pms/api/v1/actuator/**").permitAll()
                         
                         // ✅ Swagger/API docs (all methods) - all variants
                         .requestMatchers("/swagger-ui/**", "/v1/api/swagger-ui/**", "/api/v1/swagger-ui/**").permitAll()

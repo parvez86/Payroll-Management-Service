@@ -33,7 +33,7 @@ import java.util.UUID;
 /**
  * REST Controller for payroll batch operations and salary processing.
  * Handles payroll batch lifecycle, salary calculations, and ACID-compliant payroll execution.
- *
+ * <p>
  * This is a **synchronous** controller implementation, calling the service directly.
  */
 @Tag(name = "Payroll Management", description = "Payroll batch operations, salary calculations, and payment processing")
@@ -45,23 +45,42 @@ public class PayrollController {
 
     private final PayrollService payrollService;
 
-        @Operation(summary = "Get first pending or partial pending payroll batch for a company")
-        @ApiResponses(value = {
-                        @ApiResponse(responseCode = "200", description = "Payroll batch found"),
-                        @ApiResponse(responseCode = "404", description = "No pending batch found"),
-                        @ApiResponse(responseCode = "403", description = "Access denied")
-        })
-        @GetMapping("/companies/{companyId}/pending-batch")
-        @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
-        public ResponseEntity<PayrollBatchResponse> getFirstPendingOrPartialPendingBatch(
-                        @Parameter(description = "Company ID") @PathVariable("companyId") UUID companyId) {
-                PayrollBatchResponse batch = payrollService.findFirstPendingOrPartialPendingBatch(companyId);
-                if (batch != null) {
-                        return ResponseEntity.ok(batch);
-                } else {
-                        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-                }
+    @Operation(summary = "Get first pending or partial pending payroll batch for a company")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Payroll batch found"),
+            @ApiResponse(responseCode = "404", description = "No pending batch found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    @Deprecated
+    @GetMapping("/companies/{companyId}/pending-batch")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+    public ResponseEntity<PayrollBatchResponse> getFirstPendingOrPartialPendingBatch(
+            @Parameter(description = "Company ID") @PathVariable("companyId") UUID companyId) {
+        PayrollBatchResponse batch = payrollService.findFirstPendingOrPartialPendingBatch(companyId);
+        if (batch != null) {
+            return ResponseEntity.ok(batch);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+    }
+
+    @Operation(summary = "Get Last payroll batch for a company")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Payroll batch found"),
+            @ApiResponse(responseCode = "404", description = "No pending batch found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    @GetMapping("/companies/{companyId}/last-batch")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+    public ResponseEntity<PayrollBatchResponse> getFirstPendingOrPartialPendingOrLastBatch(
+            @Parameter(description = "Company ID") @PathVariable("companyId") UUID companyId) {
+        PayrollBatchResponse batch = payrollService.getLastPayrollBatchByIdAndEmployeeId(companyId);
+        if (batch != null) {
+            return ResponseEntity.ok(batch);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
 
     @Operation(summary = "Create a new payroll batch")
     @ApiResponses(value = {
@@ -117,9 +136,10 @@ public class PayrollController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<Page<PayrollItemResponse>> getBatchItems(
             @Parameter(description = "Payroll batch ID") @PathVariable UUID batchId,
+            @Parameter(description = "EmployeeId ID") @RequestParam(value = "employeeId", required = false) UUID employeeId,
             @PageableDefault(size = 20, sort = "basics", direction = Sort.Direction.DESC) Pageable pageable) {
         log.debug("Retrieving payroll items for batch: {}", batchId);
-        return ResponseEntity.ok(payrollService.getBatchItems(batchId, pageable));
+        return ResponseEntity.ok(payrollService.getBatchItems(batchId, employeeId, pageable));
     }
 
     // --- SALARY CALCULATIONS ---
