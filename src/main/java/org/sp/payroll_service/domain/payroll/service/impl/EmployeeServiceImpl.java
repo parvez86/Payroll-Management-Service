@@ -455,6 +455,12 @@ public class EmployeeServiceImpl extends AbstractCrudService<
         return employeeRepository.count();
     }
 
+    @Override
+    public Integer generateEmployeeCode() {
+        log.debug("Generating employee code");
+        return employeeRepository.findMaxIdNumber()+1;
+    }
+
 
     /**
      * Override buildSpecificationFromFilter to provide custom filtering logic.

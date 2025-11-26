@@ -29,7 +29,7 @@ public record EmployeeUpdateRequest(
     @Email
     String email,
 
-    @NotBlank @Size(min = 6) String password,
+    @Size(min = 6) String password,
 
     // Example of enforcing validity using a regex pattern
     @Pattern(

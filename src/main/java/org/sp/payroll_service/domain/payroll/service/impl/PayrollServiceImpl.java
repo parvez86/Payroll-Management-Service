@@ -326,7 +326,7 @@ public class PayrollServiceImpl implements PayrollService {
         payrollBatchRepository.findById(batchId)
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("PayrollBatch", batchId));
 
-        Page<PayrollItem> itemPage = payrollItemRepository.findByPayrollBatch_IdAndEmployee_Id(batchId, employeeId, pageable);
+        Page<PayrollItem> itemPage = payrollItemRepository.findAllByPayrollBatch_IdAndEmployee_Id(batchId, employeeId, pageable);
         return itemPage.map(payrollItemMapper::toResponse);
     }
 

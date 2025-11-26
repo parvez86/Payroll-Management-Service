@@ -77,13 +77,14 @@ public interface PayrollBatchRepository extends BaseRepository<PayrollBatch, UUI
 
     /**
      * Finds the last active (not DELETED) {@link PayrollBatch} belonging to a specific company
-     * * The search is ordered by the creation date in ascending order, ensuring the oldest matching
+     * * The search is ordered by the creation date in descending order, ensuring the most recent matching
      * batch is returned first.
      *
      * @param companyId The unique identifier (UUID) of the company the batch belongs to.
-     * @return An {@link Optional} containing the oldest matching {@link PayrollBatch},
+     * @param activeEntityStatus The entity status to filter by (typically ACTIVE)
+     * @return An {@link Optional} containing the most recent matching {@link PayrollBatch},
      * or {@link Optional#empty()} if no matching batch is found.
      */
-    @Query("SELECT pb FROM PayrollBatch pb JOIN FETCH pb.company WHERE pb.company.id = :companyId AND pb.status = :activeEntityStatus ORDER BY pb.createdAt DESC")
+    @Query("SELECT pb FROM PayrollBatch pb JOIN FETCH pb.company WHERE pb.company.id = :companyId AND pb.status = :activeEntityStatus ORDER BY pb.createdAt DESC LIMIT 1")
     Optional<PayrollBatch> findLastPayrollBatchCompanyIdqByCreatedAtDesc(@Param("companyId") UUID companyId, @Param("activeEntityStatus") EntityStatus activeEntityStatus);
 }

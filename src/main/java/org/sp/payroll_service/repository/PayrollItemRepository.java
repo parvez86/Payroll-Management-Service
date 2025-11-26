@@ -6,6 +6,7 @@ import org.sp.payroll_service.domain.common.repository.BaseRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -37,10 +38,35 @@ public interface PayrollItemRepository extends BaseRepository<PayrollItem, UUID>
      */
     List<PayrollItem> findByPayrollBatchIdAndPayrollItemStatus(UUID batchId, PayrollItemStatus status);
 
+
     /**
      * Find paginated payroll items for a specific batch.
      */
-    Page<PayrollItem> findByPayrollBatch_IdAndEmployee_Id(UUID batchId, UUID employeeId, Pageable pageable);
+
+    @Query(
+            value = """
+                SELECT PI.*
+                FROM payroll_items PI
+                WHERE
+                    PI.batch_id = :batchId
+                    AND (:employeeId IS NULL OR PI.employee_id = :employeeId)
+                    AND PI.status != 'DELETED'
+                """,
+            countQuery = """
+                SELECT count(PI.id)
+                FROM payroll_items PI
+                WHERE
+                    PI.batch_id = :batchId
+                    AND (:employeeId IS NULL OR PI.employee_id = :employeeId)
+                    AND PI.status != 'DELETED'
+                """,
+            nativeQuery = true
+    )
+    Page<PayrollItem> findAllByPayrollBatch_IdAndEmployee_Id(
+            @Param("batchId") UUID batchId,
+            @Param("employeeId") UUID employeeId,
+            Pageable pageable
+    );
 
     /**
      * Finds the latest active Payroll Item for a specific Employee ID.

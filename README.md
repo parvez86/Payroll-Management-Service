@@ -901,7 +901,7 @@ git push origin feature/employee-management
 ## 📞 Support & Documentation
 
 ### Quick Links
-- **Swagger API Docs**: http://localhost:20001/pms/v1/api/swagger-ui/index.html
+- **Swagger API Docs**: http://localhost:20001/pms/swagger-ui/index.html
 - **Security Credentials**: [docs/SECURITY_CREDENTIALS.md](docs/SECURITY_CREDENTIALS.md)
 
 ### Troubleshooting Common Issues

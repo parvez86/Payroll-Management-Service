@@ -42,4 +42,6 @@ public interface EmployeeService extends BaseCrudService<
      * @return total employee count
      */
     Long getTotalEmployeeCount();
+
+    Integer generateEmployeeCode();
 }

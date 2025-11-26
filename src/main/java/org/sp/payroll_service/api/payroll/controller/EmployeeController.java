@@ -77,12 +77,20 @@ public class EmployeeController {
             @ApiResponse(responseCode = "404", description = "Employee not found"),
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
+
     @GetMapping("/{employeeId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER', 'EMPLOYEE')")
     public ResponseEntity<EmployeeResponse> getEmployeeById(
             @Parameter(description = "Employee ID") @PathVariable UUID employeeId) {
         log.debug("Retrieving employee: {}", employeeId);
         return ResponseEntity.ok(employeeService.findById(employeeId));
+    }
+
+    @PostMapping("/code")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+    public ResponseEntity<Integer> generateEmployeeCode() {
+        log.debug("Generate employee Code");
+        return ResponseEntity.ok(employeeService.generateEmployeeCode());
     }
 
     @Operation(summary = "Get employee by business ID")
