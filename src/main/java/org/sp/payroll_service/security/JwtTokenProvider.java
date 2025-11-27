@@ -119,6 +119,7 @@ public class JwtTokenProvider {
                 .subject(userId)
                 .id(refreshJti) // Unique JTI for refresh token
                 .claim("username", user.getUsername())
+                .claim("role", user.getRole().toString())
                 .claim("type", "refresh") // Token type
                 .issuedAt(now)
                 .expiration(expiryDate)

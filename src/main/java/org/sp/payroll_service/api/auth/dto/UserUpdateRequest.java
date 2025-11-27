@@ -8,8 +8,7 @@ import org.sp.payroll_service.domain.common.enums.Role;
  * Request DTO for updating an existing User.
  */
 public record UserUpdateRequest(
-    @NotBlank String username,
-    @NotBlank @Email String email,
+    @Email String email,
     String currentPassword, // Required only if newPassword is provided
     String newPassword,
     Role role

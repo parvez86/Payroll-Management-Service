@@ -5,6 +5,7 @@ import org.sp.payroll_service.api.wallet.dto.AccountFilter;
 import org.sp.payroll_service.api.wallet.dto.AccountResponse;
 import org.sp.payroll_service.api.wallet.dto.CreateAccountRequest;
 import org.sp.payroll_service.api.wallet.dto.UpdateAccountRequest;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.enums.OwnerType;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
 import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
@@ -54,7 +55,7 @@ public class AccountServiceImpl extends AbstractCrudService<
     @Override
     @Transactional
     // FIX: Changed return type from CompletableFuture<AccountResponse> to AccountResponse
-    public AccountResponse create(CreateAccountRequest request) {
+    public AccountResponse create(CreateAccountRequest request, HeaderResponse principal) {
         // Fintech Rule 1: Account numbers must be globally unique
         if (accountRepository.existsByAccountNumber(request.accountNumber())) {
             throw DuplicateEntryException.forEntity("Account", "accountNumber", request.accountNumber());
@@ -62,23 +63,30 @@ public class AccountServiceImpl extends AbstractCrudService<
 
         // Fintech Rule 2: Branch existence validated in mapToEntity via getBranchOrThrow
 
-        return super.create(request);
+        return super.create(request, principal);
     }
 
     @Override
     @Transactional
     // FIX: Changed return type from CompletableFuture<AccountResponse> to AccountResponse
-    public AccountResponse update(UUID id, UpdateAccountRequest request) {
+    public AccountResponse update(UUID id, UpdateAccountRequest request, HeaderResponse principal) {
         // Fintech Rule 1: Account number cannot be changed here (separate process)
         // Fintech Rule 2: Check update uniqueness (only for account number if it were changing)
 
-        return super.update(id, request);
+        return super.update(id, request, principal);
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID id, org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.warn("Deleting account {} by {} ({})", id, principal.username(), principal.userId());
+        super.delete(id, principal);
     }
 
     // --- Mapping Implementations (No changes needed) ---
 
     @Override
-    protected Account mapToEntity(CreateAccountRequest creationRequest) {
+    protected Account mapToEntity(CreateAccountRequest creationRequest, HeaderResponse headerResponse) {
         Branch branch = getBranchOrThrow(creationRequest.branchId());
 
         return Account.builder()
@@ -89,13 +97,15 @@ public class AccountServiceImpl extends AbstractCrudService<
                 .accountNumber(creationRequest.accountNumber())
                 .overdraftLimit(creationRequest.overdraftLimit())
                 .branch(branch)
+                .createdBy(headerResponse.userId())
                 .build();
     }
 
     @Override
-    protected Account mapToEntity(UpdateAccountRequest updateRequest, Account entity) {
+    protected Account mapToEntity(UpdateAccountRequest updateRequest, Account entity, HeaderResponse headerResponse) {
         entity.setAccountName(updateRequest.accountName());
         entity.setOverdraftLimit(updateRequest.overdraftLimit());
+        entity.setUpdatedBy(headerResponse.userId());
         return entity;
     }
 

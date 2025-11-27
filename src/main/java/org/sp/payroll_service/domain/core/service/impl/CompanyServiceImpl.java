@@ -5,6 +5,7 @@ import org.sp.payroll_service.api.core.dto.*;
 import org.sp.payroll_service.api.payroll.dto.TransactionResponse;
 import org.sp.payroll_service.api.wallet.dto.AccountResponse;
 import org.sp.payroll_service.domain.common.dto.response.AuditInfo;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.dto.response.Money;
 import org.sp.payroll_service.domain.common.enums.AccountType;
 import org.sp.payroll_service.domain.common.enums.OwnerType;
@@ -74,20 +75,20 @@ public class CompanyServiceImpl extends AbstractCrudService<
     @Override
     @Transactional
     // FIX: Changed return type from CompletableFuture<CompanyResponse> to CompanyResponse
-    public CompanyResponse create(CompanyCreateRequest request) {
+    public CompanyResponse create(CompanyCreateRequest request, HeaderResponse principal) {
         // Business Rule: Company name must be unique
         if (companyRepository.existsByName(request.name())) {
             throw DuplicateEntryException.forEntity("Company", "name", request.name());
         }
 
         // We assume createMainAccountEntity handles Account uniqueness (accountNumber)
-        return super.create(request);
+        return super.create(request, principal);
     }
 
     // --- MAPPING LOGIC (No changes needed) ---
 
     @Override
-    protected Company mapToEntity(CompanyCreateRequest creationRequest) {
+    protected Company mapToEntity(CompanyCreateRequest creationRequest, HeaderResponse headerResponse) {
         // 1. Fetch linked Formula entity
         SalaryDistributionFormula formula = getFormulaOrThrow(creationRequest.salaryFormulaId());
 
@@ -96,6 +97,7 @@ public class CompanyServiceImpl extends AbstractCrudService<
                 .name(creationRequest.name())
                 .description(creationRequest.description())
                 .salaryFormula(formula)
+                .createdBy(headerResponse.userId())
                 .build();
 
         // 3. Create and set the Main Account entity (ID is transient until company save)
@@ -107,13 +109,14 @@ public class CompanyServiceImpl extends AbstractCrudService<
     }
 
     @Override
-    protected Company mapToEntity(CompanyUpdateRequest updateRequest, Company entity) {
+    protected Company mapToEntity(CompanyUpdateRequest updateRequest, Company entity, HeaderResponse headerResponse) {
         // Business Rule: Check uniqueness of name (excluding current entity)
         if (StringUtils.hasText(updateRequest.name())) {
             if (companyRepository.existsByNameAndIdNot(updateRequest.name(), entity.getId())) {
                 throw DuplicateEntryException.forEntity("Company", "name", updateRequest.name());
             }
             entity.setName(updateRequest.name());
+            entity.setUpdatedBy(headerResponse.userId());
         }
 
         if (updateRequest.description() != null) {
@@ -325,5 +328,12 @@ public class CompanyServiceImpl extends AbstractCrudService<
 
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID id, org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.warn("Deleting company {} by {} ({})", id, principal.username(), principal.userId());
+        super.delete(id, principal);
     }
 }

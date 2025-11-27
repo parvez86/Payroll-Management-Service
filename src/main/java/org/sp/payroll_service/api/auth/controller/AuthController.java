@@ -11,11 +11,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.api.auth.dto.*;
 import org.sp.payroll_service.domain.auth.service.AuthenticationService;
 import org.sp.payroll_service.domain.auth.service.UserService;
+import org.sp.payroll_service.domain.common.annotation.HeaderPrincipal;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -169,15 +169,34 @@ public class AuthController {
             @ApiResponse(responseCode = "404", description = "User not found")
     })
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserDetailsResponse> me(@AuthenticationPrincipal UserDetails currentUser) {
+    public ResponseEntity<UserDetailsResponse> me(@HeaderPrincipal HeaderResponse currentUser) {
         log.info("Get current user details API called");
         try {
-            UserDetailsResponse response = userService.me(currentUser.getUsername());
+            UserDetailsResponse response = userService.me(currentUser.username());
             log.info("User details retrieved successfully");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Failed to get user details: {}", e.getMessage());
             throw e;
         }
+    }
+
+    @Deprecated
+    /**
+     * Test endpoint to verify @HeaderPrincipal injection with all fields.
+     * @param principal HeaderResponse from JWT
+     * @return The principal details
+     */
+    @GetMapping("/principal-check")
+    @Operation(summary = "Check HeaderPrincipal Injection", description = "Test endpoint to verify @HeaderPrincipal annotation properly injects user info from JWT")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Principal details retrieved successfully"),
+            @ApiResponse(responseCode = "401", description = "Invalid or expired token")
+    })
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<HeaderResponse> checkPrincipal(@HeaderPrincipal HeaderResponse principal) {
+        log.info("[PRINCIPAL-TEST] userId={}, username={}, role={}, jti={}", 
+                principal.userId(), principal.username(), principal.role(), principal.jti());
+        return ResponseEntity.ok(principal);
     }
 }

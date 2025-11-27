@@ -15,6 +15,7 @@ import org.sp.payroll_service.api.payroll.dto.PayrollBatchSummary;
 import org.sp.payroll_service.api.payroll.dto.PayrollItemResponse;
 import org.sp.payroll_service.api.payroll.dto.PayrollResult;
 import org.sp.payroll_service.api.payroll.dto.SalaryCalculation;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.payroll.service.PayrollService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -90,12 +91,13 @@ public class PayrollController {
     })
     @PostMapping("/batches")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<PayrollBatchResponse> createBatch(
+    public ResponseEntity<PayrollBatchResponse> createPayrollBatch(
             @Valid @RequestBody CreatePayrollBatchRequest request,
-            @AuthenticationPrincipal UserDetails currentUser) {
-        log.info("Creating new payroll batch: {}", request.name());
-        PayrollBatchResponse batch = payrollService.createPayrollBatch(request, currentUser);
-        return ResponseEntity.status(HttpStatus.CREATED).body(batch);
+            @AuthenticationPrincipal HeaderResponse principal) {
+        log.info("Creating payroll batch for company: {} by {} ({})", request.companyId(), principal.username(), principal.userId());
+        PayrollBatchResponse response = payrollService.createPayrollBatch(request, principal);
+        log.info("Payroll batch created for company {} by {}", request.companyId(), principal.userId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Operation(summary = "Get all payroll batches")
@@ -185,9 +187,10 @@ public class PayrollController {
     @PostMapping("/batches/{batchId}/process")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PayrollResult> processPayroll(
-            @Parameter(description = "Payroll batch ID") @PathVariable UUID batchId) {
-        log.warn("Processing payroll batch with ACID transactions: {}", batchId);
-        PayrollResult result = payrollService.processPayroll(batchId);
+            @Parameter(description = "Payroll batch ID") @PathVariable UUID batchId,
+            @AuthenticationPrincipal HeaderResponse principal) {
+        log.warn("Processing payroll batch with ACID transactions: {}, principal: {}", batchId, principal);
+        PayrollResult result = payrollService.processPayroll(batchId, principal);
 
         if (result.success()) {
             log.info("Payroll batch {} processed successfully. Processed: {}, Failed: {}",

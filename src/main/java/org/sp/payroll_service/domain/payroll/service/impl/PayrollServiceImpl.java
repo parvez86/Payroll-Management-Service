@@ -5,11 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.api.payroll.dto.*;
 import org.sp.payroll_service.api.payroll.mapper.PayrollBatchMapper;
 import org.sp.payroll_service.api.payroll.mapper.PayrollItemMapper;
-import org.sp.payroll_service.domain.auth.entity.UserDetailsImpl;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.dto.response.Money;
-import org.sp.payroll_service.domain.common.enums.EntityStatus;
-import org.sp.payroll_service.domain.common.enums.PayrollItemStatus;
-import org.sp.payroll_service.domain.common.enums.PayrollStatus;
+import org.sp.payroll_service.domain.common.enums.*;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
 import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
 import org.sp.payroll_service.domain.core.entity.Company;
@@ -31,7 +29,6 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -65,7 +62,7 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     @Transactional
-    public PayrollBatchResponse createPayrollBatch(CreatePayrollBatchRequest request, UserDetails currentUser) {
+    public PayrollBatchResponse createPayrollBatch(CreatePayrollBatchRequest request, HeaderResponse currentUser) {
         log.info("Creating payroll batch: {} for company: {}", request.name(), request.companyId());
 
         Optional<PayrollBatch> existingPayrollBatch= payrollBatchRepository.findFirstActiveByPayrollStatus(PayrollStatus.PENDING);
@@ -95,8 +92,8 @@ public class PayrollServiceImpl implements PayrollService {
                 .build();
         
         // Set created_by from authenticated user (if available)
-        if (currentUser instanceof UserDetailsImpl userDetailsImpl) {
-            batch.setCreatedBy(userDetailsImpl.getId());
+        if (currentUser instanceof HeaderResponse principal) {
+            batch.setCreatedBy(principal.userId());
         }
 
         PayrollBatch savedBatch = payrollBatchRepository.save(batch);
@@ -155,7 +152,7 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     @Transactional(isolation = Isolation.SERIALIZABLE)
-    public PayrollResult processPayroll(UUID batchId) {
+    public PayrollResult processPayroll(UUID batchId, HeaderResponse principal) {
         log.warn("Processing payroll batch with ACID transactions: {}", batchId);
 
         try {
@@ -212,11 +209,16 @@ public class PayrollServiceImpl implements PayrollService {
                             .debitAccountId(companyAccount.getId())
                             .creditAccountId(item.getEmployee().getAccount().getId())
                             .amount(item.getAmount())
+                            .payrollBatchId(batchId)
+                            .payrollItemId(item.getId())
+                            .transactionType(TransactionType.SALARY_DISBURSEMENT)
+                            .transactionCategory(TransactionCategory.PAYROLL)
                             .referenceId("PAYROLL-" + batchId + "-" + item.getEmployee().getCode())
                             .description("Salary payment for " + item.getEmployee().getName())
+                            .createdBy(principal.userId())
                             .build();
 
-                    transactionService.executeTransfer(transferRequest);
+                    transactionService.executeTransfer(transferRequest, principal);
 
                     item.setPayrollItemStatus(PayrollItemStatus.PAID);
                     item.setExecutedAt(Instant.now());

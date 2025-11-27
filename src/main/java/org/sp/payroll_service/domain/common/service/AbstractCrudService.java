@@ -1,6 +1,7 @@
 package org.sp.payroll_service.domain.common.service;
 
 import org.sp.payroll_service.api.payroll.dto.PageResponse;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.entity.BaseEntity;
 import org.sp.payroll_service.domain.common.enums.EntityStatus;
 import org.springframework.data.domain.Page;
@@ -46,8 +47,8 @@ public abstract class AbstractCrudService<
     }
 
     // --- Abstract Methods for Mapping ---
-    protected abstract E mapToEntity(C creationRequest);
-    protected abstract E mapToEntity(U updateRequest, E entity);
+    protected abstract E mapToEntity(C creationRequest, HeaderResponse headerResponse);
+    protected abstract E mapToEntity(U updateRequest, E entity, HeaderResponse headerResponse);
     protected abstract R mapToResponse(E entity);
     protected List<R> mapToResponse(List<E> entityList){
         return (entityList == null) ? Collections.emptyList() : entityList.stream()
@@ -59,8 +60,8 @@ public abstract class AbstractCrudService<
 
     @Override
     @Transactional
-    public R create(C request) {
-        E entity = mapToEntity(request);
+    public R create(C request, HeaderResponse principal) {
+        E entity = mapToEntity(request, principal);
         E savedEntity = repository.save(entity);
         return mapToResponse(savedEntity);
     }
@@ -83,21 +84,22 @@ public abstract class AbstractCrudService<
 
     @Override
     @Transactional
-    public R update(ID id, U request) {
+    public R update(ID id, U request, HeaderResponse principal) {
         E entity = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, entityName + " not found with ID: " + id));
 
-        E updatedEntity = mapToEntity(request, entity);
+        E updatedEntity = mapToEntity(request, entity, principal);
         E savedEntity = repository.save(updatedEntity);
         return mapToResponse(savedEntity);
     }
 
     @Override
     @Transactional
-    public void delete(ID id) {
+    public void delete(ID id, HeaderResponse principal) {
         E entity = repository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, entityName));
         entity.setStatus(EntityStatus.DELETED);
+        entity.setUpdatedBy(principal.userId());
         repository.save(entity);
     }
 

@@ -2,6 +2,7 @@ package org.sp.payroll_service.domain.core.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.api.core.dto.*;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
 import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
 import org.sp.payroll_service.domain.common.service.AbstractCrudService;
@@ -48,29 +49,35 @@ public class BranchServiceImpl extends AbstractCrudService<
     @Override
     @Transactional
     // FIX: Changed return type from CompletableFuture<BranchResponse> to BranchResponse
-    public BranchResponse create(BranchCreateRequest request) {
+    public BranchResponse create(BranchCreateRequest request, HeaderResponse principal) {
         // Blocking uniqueness check is fine in a synchronous method
         if (branchRepository.existsByBranchNameAndBank_Id(request.branchName(), request.bankId())) {
             throw DuplicateEntryException.forEntity("Branch", "branchName", request.branchName());
         }
-        return super.create(request);
+        return super.create(request, principal);
     }
 
     @Override
     @Transactional
     // FIX: Changed return type from CompletableFuture<BranchResponse> to BranchResponse
-    public BranchResponse update(UUID id, BranchUpdateRequest request) {
+    public BranchResponse update(UUID id, BranchUpdateRequest request, HeaderResponse principal) {
         // Blocking uniqueness check is fine
         checkUniquenessOnUpdate(id, request.branchName(), request.bankId());
 
-        return super.update(id, request);
+        return super.update(id, request, principal);
     }
 
+    @Override
+    @Transactional
+    public void delete(UUID id, org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.warn("Deleting branch {} by {} ({})", id, principal.username(), principal.userId());
+        super.delete(id, principal);
+    }
 
     // --- Abstract Mapping Implementations (No changes needed) ---
 
     @Override
-    protected Branch mapToEntity(BranchCreateRequest creationRequest) {
+    protected Branch mapToEntity(BranchCreateRequest creationRequest, HeaderResponse headerResponse) {
         // Blocking JPA call is fine in this method
         Bank bank = getBankOrThrow(creationRequest.bankId());
 
@@ -78,15 +85,17 @@ public class BranchServiceImpl extends AbstractCrudService<
                 .bank(bank)
                 .branchName(creationRequest.branchName())
                 .address(creationRequest.address())
+                .createdBy(headerResponse.userId())
                 .build();
     }
 
     @Override
-    protected Branch mapToEntity(BranchUpdateRequest updateRequest, Branch entity) {
+    protected Branch mapToEntity(BranchUpdateRequest updateRequest, Branch entity, HeaderResponse headerResponse) {
         if (!entity.getBank().getId().equals(updateRequest.bankId())) {
             // Blocking JPA call is fine in this method
             Bank bank = getBankOrThrow(updateRequest.bankId());
             entity.setBank(bank);
+            entity.setUpdatedBy(headerResponse.userId());
         }
 
         entity.setBranchName(updateRequest.branchName());

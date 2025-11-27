@@ -48,9 +48,11 @@ public class CompanyController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CompanyResponse> createCompany(
-            @Valid @RequestBody CompanyCreateRequest request) {
-        log.info("Request to create new company: {}", request.name());
-        CompanyResponse response = companyService.create(request);
+            @Valid @RequestBody CompanyCreateRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.info("Request to create new company: {} by {} ({})", request.name(), principal.username(), principal.userId());
+        CompanyResponse response = companyService.create(request, principal);
+        log.info("Company {} created by {}", response.id(), principal.userId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -74,9 +76,12 @@ public class CompanyController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<CompanyResponse> updateCompany(
             @PathVariable UUID id,
-            @Valid @RequestBody CompanyUpdateRequest request) {
-        log.info("Request to update company with ID: {}", id);
-        return ResponseEntity.ok(companyService.update(id, request));
+            @Valid @RequestBody CompanyUpdateRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.info("Request to update company with ID: {} by {} ({})", id, principal.username(), principal.userId());
+        ResponseEntity<CompanyResponse> response = ResponseEntity.ok(companyService.update(id, request, principal));
+        log.info("Company {} updated by {}", id, principal.userId());
+        return response;
     }
 
     /**
@@ -86,9 +91,11 @@ public class CompanyController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteCompany(@PathVariable UUID id) {
-        log.warn("Request to delete company with ID: {}", id);
-        companyService.delete(id);
+    public ResponseEntity<Void> deleteCompany(@PathVariable UUID id,
+                                              @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.warn("Request to delete company with ID: {} by {} ({})", id, principal.username(), principal.userId());
+        companyService.delete(id, principal);
+        log.info("Company {} deleted by {}", id, principal.userId());
         return ResponseEntity.noContent().build();
     }
 

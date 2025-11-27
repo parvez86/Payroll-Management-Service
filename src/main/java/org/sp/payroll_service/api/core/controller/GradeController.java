@@ -10,12 +10,14 @@ import org.sp.payroll_service.api.core.dto.GradeFilter;
 import org.sp.payroll_service.api.core.dto.GradeResponse;
 import org.sp.payroll_service.api.core.dto.GradeUpdateRequest;
 import org.sp.payroll_service.api.payroll.dto.PageResponse;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.core.service.GradeService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -39,9 +41,11 @@ public class GradeController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<GradeResponse> createGrade(
-            @Valid @RequestBody GradeCreateRequest request) {
-        log.info("Request to create new grade: {}", request.name());
-        GradeResponse response = gradeService.create(request);
+            @Valid @RequestBody GradeCreateRequest request,
+            @AuthenticationPrincipal HeaderResponse principal) {
+        log.info("Request to create new grade: {} by {} ({})", request.name(), principal.username(), principal.userId());
+        GradeResponse response = gradeService.create(request, principal);
+        log.info("Grade {} created by {}", response.id(), principal.userId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -59,18 +63,21 @@ public class GradeController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<GradeResponse> updateGrade(
             @PathVariable UUID id,
-            @Valid @RequestBody GradeUpdateRequest request) {
+            @Valid @RequestBody GradeUpdateRequest request,
+            @AuthenticationPrincipal HeaderResponse principal) {
         log.info("Request to update grade with ID: {}", id);
-        return ResponseEntity.ok(gradeService.update(id, request));
+        return ResponseEntity.ok(gradeService.update(id, request, principal));
     }
 
     @Operation(summary = "Delete a Grade/Rank.")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteGrade(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteGrade(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal HeaderResponse principal) {
         log.warn("Request to delete grade with ID: {}", id);
-        gradeService.delete(id);
+        gradeService.delete(id, principal);
         return ResponseEntity.noContent().build();
     }
 

@@ -3,13 +3,13 @@ package org.sp.payroll_service.domain.payroll.service;
 import org.sp.payroll_service.api.payroll.dto.TransactionFilter;
 import org.sp.payroll_service.api.payroll.dto.TransactionResponse;
 import org.sp.payroll_service.api.payroll.dto.TransferRequest;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.dto.response.Money;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Service interface for financial transaction operations.
@@ -20,10 +20,12 @@ public interface TransactionService {
     /**
      * Executes a money transfer between two accounts.
      * Uses ACID-compliant double-entry accounting.
-     * @param request transfer details
+     *
+     * @param request   transfer details
+     * @param principal
      * @return transaction result
      */
-    TransactionResponse executeTransfer(TransferRequest request);
+    TransactionResponse executeTransfer(TransferRequest request, HeaderResponse principal);
     
     /**
      * Gets current balance for an account.
@@ -34,11 +36,13 @@ public interface TransactionService {
     
     /**
      * Retrieves transaction history with optional filtering.
-     * @param filter filter criteria
-     * @param pageable pagination parameters
+     *
+     * @param filter    filter criteria
+     * @param principal
+     * @param pageable  pagination parameters
      * @return paginated transactions
      */
-    Page<TransactionResponse> getTransactionHistory(TransactionFilter filter, Pageable pageable);
+    Page<TransactionResponse> getTransactionHistory(TransactionFilter filter, HeaderResponse principal, Pageable pageable);
     
     /**
      * Retrieves a specific transaction by ID.
@@ -72,9 +76,11 @@ public interface TransactionService {
     
     /**
      * Reverses a transaction (if supported).
+     *
      * @param transactionId transaction to reverse
-     * @param reason reason for reversal
+     * @param reason        reason for reversal
+     * @param principal Authentication principal
      * @return reversal transaction
      */
-    TransactionResponse reverseTransaction(UUID transactionId, String reason);
+    TransactionResponse reverseTransaction(UUID transactionId, String reason, HeaderResponse principal);
 }

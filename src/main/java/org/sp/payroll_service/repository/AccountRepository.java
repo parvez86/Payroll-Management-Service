@@ -47,6 +47,15 @@ public interface AccountRepository extends BaseRepository<Account, UUID> {
     /**
      * Checks if an active Account exists with the given account number, excluding current id
      */
-
-    boolean existsByAccountNumberAndIdNot(String accountNumber, UUID currentId);
+    boolean existsByAccountNumberAndIdNot(String accountNumber, UUID id);
+    
+    /**
+     * Finds an account with pessimistic write lock to prevent concurrent modifications.
+     * Use this for financial operations that modify account balance.
+     * @param id Account ID
+     * @return Optional Account with exclusive lock
+     */
+    @org.springframework.data.jpa.repository.Query("SELECT a FROM Account a WHERE a.id = :id")
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    Optional<Account> findByIdWithLock(@org.springframework.data.repository.query.Param("id") UUID id);
 }

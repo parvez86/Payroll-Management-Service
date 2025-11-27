@@ -11,14 +11,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.api.payroll.dto.TransactionFilter;
 import org.sp.payroll_service.api.payroll.dto.TransactionResponse;
 import org.sp.payroll_service.api.payroll.dto.TransferRequest;
+import org.sp.payroll_service.domain.common.annotation.HeaderPrincipal;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.dto.response.Money;
 import org.sp.payroll_service.domain.payroll.service.TransactionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -40,7 +44,6 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     // --- MONEY TRANSFER OPERATIONS ---
-
     @Operation(summary = "Execute money transfer between accounts")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Transfer executed successfully"),
@@ -50,11 +53,11 @@ public class TransactionController {
     @PostMapping("/transfer")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TransactionResponse> executeTransfer(
-            @Valid @RequestBody TransferRequest request) {
-        log.info("Executing transfer: {} from {} to {}",
-                request.amount(), request.debitAccountId(), request.creditAccountId());
-
-        TransactionResponse transaction = transactionService.executeTransfer(request);
+            @Valid @RequestBody TransferRequest request,
+            @AuthenticationPrincipal HeaderResponse principal) {
+        log.info("Executing transfer: {} from {} to {} by {} ({})",
+                request.amount(), request.debitAccountId(), request.creditAccountId(), principal.username(), principal.userId());
+        TransactionResponse transaction = transactionService.executeTransfer(request, principal);
         return ResponseEntity.status(HttpStatus.CREATED).body(transaction);
     }
 
@@ -102,10 +105,11 @@ public class TransactionController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<Page<TransactionResponse>> getTransactionHistory(
             @Parameter(description = "Filter criteria") @ModelAttribute TransactionFilter filter,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
-        log.debug("Retrieving transaction history with filter: {}", filter);
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @HeaderPrincipal HeaderResponse principal) {
+        log.info("Retrieving transaction history with filter: {}, principal: {}", filter, principal);
 
-        return ResponseEntity.ok(transactionService.getTransactionHistory(filter, pageable));
+        return ResponseEntity.ok(transactionService.getTransactionHistory(filter, principal, pageable));
     }
 
     @Operation(summary = "Get transaction by ID")
@@ -167,10 +171,11 @@ public class TransactionController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TransactionResponse> reverseTransaction(
             @Parameter(description = "Transaction ID") @PathVariable UUID transactionId,
-            @Parameter(description = "Reason for reversal") @RequestBody String reason) {
-        log.warn("Reversing transaction: {} with reason: {}", transactionId, reason);
+            @Parameter(description = "Reason for reversal") @RequestBody String reason,
+            @AuthenticationPrincipal HeaderResponse principal) {
+        log.warn("Reversing transaction: {} with reason: {}, principal: {}", transactionId, reason, principal);
 
-        TransactionResponse reversalTransaction = transactionService.reverseTransaction(transactionId, reason);
+        TransactionResponse reversalTransaction = transactionService.reverseTransaction(transactionId, reason, principal);
         return ResponseEntity.status(HttpStatus.CREATED).body(reversalTransaction);
     }
 }

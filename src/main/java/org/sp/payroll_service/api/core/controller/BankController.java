@@ -10,12 +10,14 @@ import org.sp.payroll_service.api.core.dto.BankFilter;
 import org.sp.payroll_service.api.core.dto.BankResponse;
 import org.sp.payroll_service.api.core.dto.BankUpdateRequest;
 import org.sp.payroll_service.api.payroll.dto.PageResponse;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.core.service.BankService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -37,9 +39,11 @@ public class BankController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BankResponse> createBank(
-            @Valid @RequestBody BankCreateRequest request) {
-        log.info("Request to create new bank: {}", request.name());
-        BankResponse response = bankService.create(request);
+            @Valid @RequestBody BankCreateRequest request,
+            @AuthenticationPrincipal HeaderResponse principal) {
+        log.info("Request to create new bank: {} by {} ({})", request.name(), principal.username(), principal.userId());
+        BankResponse response = bankService.create(request, principal);
+        log.info("Bank {} created by {}", response.id(), principal.userId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -59,9 +63,10 @@ public class BankController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BankResponse> updateBank(
             @PathVariable UUID id,
-            @Valid @RequestBody BankUpdateRequest request) {
+            @Valid @RequestBody BankUpdateRequest request,
+            @AuthenticationPrincipal HeaderResponse principal) {
         log.info("Request to update bank with ID: {}", id);
-        return ResponseEntity.ok(bankService.update(id, request));
+        return ResponseEntity.ok(bankService.update(id, request, principal));
     }
 
     // --- DELETE ---
@@ -69,9 +74,11 @@ public class BankController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteBank(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteBank(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal HeaderResponse principal) {
         log.warn("Request to delete bank with ID: {}", id);
-        bankService.delete(id);
+        bankService.delete(id, principal);
         return ResponseEntity.noContent().build();
     }
 

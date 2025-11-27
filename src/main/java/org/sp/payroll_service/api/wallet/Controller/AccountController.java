@@ -45,10 +45,12 @@ public class AccountController {
     // Restrict creation to administrative or payroll setup roles
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<AccountResponse> createAccount(
-            @Valid @RequestBody CreateAccountRequest request) {
-        log.info("Request to create new account for owner: {}", request.ownerId());
+            @Valid @RequestBody CreateAccountRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.info("Request to create new account for owner: {} by {} ({})", request.ownerId(), principal.username(), principal.userId());
 
-        AccountResponse response = accountService.create(request);
+        AccountResponse response = accountService.create(request, principal);
+        log.info("Account {} created by {}", response.id(), principal.userId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -96,10 +98,13 @@ public class AccountController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<AccountResponse> updateAccount(
             @Parameter(description = "Account ID") @PathVariable UUID id,
-            @Valid @RequestBody UpdateAccountRequest request) {
-        log.info("Request to update account metadata with ID: {}", id);
+            @Valid @RequestBody UpdateAccountRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.info("Request to update account metadata with ID: {} by {} ({})", id, principal.username(), principal.userId());
 
-        return ResponseEntity.ok(accountService.update(id, request));
+        ResponseEntity<AccountResponse> response = ResponseEntity.ok(accountService.update(id, request, principal));
+        log.info("Account metadata updated for ID: {} by {}", id, principal.userId());
+        return response;
     }
 
     // --- DELETE (Cleanup) 🗑️ ---
@@ -113,10 +118,12 @@ public class AccountController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteAccount(
-            @Parameter(description = "Account ID") @PathVariable UUID id) {
-        log.warn("Request to delete account with ID: {}", id);
+            @Parameter(description = "Account ID") @PathVariable UUID id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.warn("Request to delete account with ID: {} by {} ({})", id, principal.username(), principal.userId());
 
-        accountService.delete(id);
+        accountService.delete(id, principal);
+        log.info("Account deleted with ID: {} by {}", id, principal.userId());
         return ResponseEntity.noContent().build();
     }
 

@@ -1,6 +1,7 @@
 package org.sp.payroll_service.domain.payroll.service;
 
 import org.sp.payroll_service.api.payroll.dto.*;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.payroll.exception.InsufficientFundsException;
 import org.sp.payroll_service.domain.payroll.exception.PayrollProcessingException;
 import org.springframework.data.domain.Page;
@@ -21,7 +22,7 @@ public interface PayrollService {
      * @param request batch creation data
      * @return created batch details
      */
-    PayrollBatchResponse createPayrollBatch(CreatePayrollBatchRequest request, UserDetails currentUser);
+    PayrollBatchResponse createPayrollBatch(CreatePayrollBatchRequest request, HeaderResponse currentUser);
     
     /**
      * Calculates salaries for all employees without executing transfers.
@@ -41,12 +42,14 @@ public interface PayrollService {
     /**
      * Processes payroll batch with ACID compliance.
      * Executes actual money transfers from company to employee accounts.
-     * @param batchId batch identifier
+     *
+     * @param batchId   batch identifier
+     * @param principal
      * @return processing result with detailed transactionStatus
      * @throws InsufficientFundsException if company balance insufficient
      * @throws PayrollProcessingException if processing fails
      */
-    PayrollResult processPayroll(UUID batchId);
+    PayrollResult processPayroll(UUID batchId, HeaderResponse principal);
     
     /**
      * Retrieves all payroll batches with optional filtering.

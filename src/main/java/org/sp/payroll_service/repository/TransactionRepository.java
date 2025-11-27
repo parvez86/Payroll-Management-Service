@@ -76,4 +76,11 @@ public interface TransactionRepository extends BaseRepository<Transaction, UUID>
      * @return list of transactions
      */
     List<Transaction> findByPayrollBatchId(UUID batchId);
+    
+    /**
+     * Checks if a transaction exists with the given referenceId (for idempotency).
+     * @param referenceId transaction reference ID
+     * @return true if exists, false otherwise
+     */
+    boolean existsByReferenceId(String referenceId);
 }

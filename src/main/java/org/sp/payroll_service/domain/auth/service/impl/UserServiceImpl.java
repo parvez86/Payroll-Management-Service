@@ -5,6 +5,7 @@ import org.sp.payroll_service.api.auth.dto.*;
 import org.sp.payroll_service.api.wallet.dto.AccountResponse;
 import org.sp.payroll_service.domain.auth.entity.User;
 import org.sp.payroll_service.domain.auth.service.UserService;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
 import org.sp.payroll_service.domain.common.exception.ErrorCodes;
 import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
@@ -15,7 +16,7 @@ import org.sp.payroll_service.domain.wallet.entity.Account;
 import org.sp.payroll_service.repository.CompanyRepository;
 import org.sp.payroll_service.repository.EmployeeRepository;
 import org.sp.payroll_service.repository.UserRepository;
-import org.sp.payroll_service.security.JwtTokenProvider;
+import org.sp.payroll_service.utils.StringUtils;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -46,7 +47,6 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
     private final PasswordEncoder passwordEncoder;
     private final EmployeeRepository employeeRepository;
     private final CompanyRepository companyRepository;
-    private final JwtTokenProvider jwtTokenProvider;
 
     /**
      * Constructs the UserServiceImpl.
@@ -57,13 +57,12 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      * @param userRepository  The JPA repository for User entities.
      * @param passwordEncoder The Spring Security password encoder for hashing.
      */
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, EmployeeRepository employeeRepository, CompanyRepository companyRepository, JwtTokenProvider jwtTokenProvider) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, EmployeeRepository employeeRepository, CompanyRepository companyRepository) {
         super(userRepository, "User");
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.employeeRepository = employeeRepository;
         this.companyRepository = companyRepository;
-        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     // --- Overrides for Creation and Update with Business Logic ---
@@ -71,13 +70,14 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
     /**
      * Creates a new user after performing uniqueness checks on the username and email.
      *
-     * @param request The DTO containing the user creation data.
+     * @param request   The DTO containing the user creation data.
+     * @param principal
      * @return The {@code UserResponse} DTO of the newly created user.
      * @throws DuplicateEntryException if the username or email already exists.
      */
     @Override
     @Transactional
-    public UserResponse create(UserCreateRequest request) {
+    public UserResponse create(UserCreateRequest request, HeaderResponse principal) {
         // Business Rule: Check uniqueness before persisting
         if (userRepository.existsByUsername(request.username())) {
             throw DuplicateEntryException.forEntity("User", "username", request.username());
@@ -85,26 +85,27 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
         if (userRepository.existsByEmail(request.email())) {
             throw DuplicateEntryException.forEntity("User", "email", request.email());
         }
-        return super.create(request); // Delegates to abstract base class logic
+        return super.create(request, principal); // Delegates to abstract base class logic
     }
 
     /**
      * Updates an existing user, performing uniqueness checks and handling optional password changes.
      *
-     * @param id      The ID of the user to update.
-     * @param request The DTO containing the update data.
+     * @param id        The ID of the user to update.
+     * @param request   The DTO containing the update data.
+     * @param principal
      * @return The {@code UserResponse} DTO of the updated user.
-     * @throws ValidationException     if the current password check fails during a password change attempt.
-     * @throws DuplicateEntryException if the new username or email is already taken by another user.
+     * @throws ValidationException       if the current password check fails during a password change attempt.
+     * @throws DuplicateEntryException   if the new username or email is already taken by another user.
      * @throws ResourceNotFoundException if the user with the given ID is not found.
      */
     @Override
     @Transactional
-    public UserResponse update(UUID id, UserUpdateRequest request) {
+    public UserResponse update(UUID id, UserUpdateRequest request, HeaderResponse principal) {
         User existingUser = repository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("User", id)); // Added proper exception
 
-        checkUniquenessOnUpdate(id, request.username(), request.email());
+        checkUniquenessOnUpdate(id, null, request.email());
 
         // Business Rule: Handle optional password change
         if (request.newPassword() != null && !request.newPassword().isEmpty()) {
@@ -114,7 +115,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
             existingUser.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         }
 
-        return super.update(id, request);
+        return super.update(id, request, principal);
     }
 
     /**
@@ -233,13 +234,13 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      * @return The new, transient {@code User} entity.
      */
     @Override
-    protected User mapToEntity(UserCreateRequest creationRequest) {
-        // ... (implementation code) ...
+    protected User mapToEntity(UserCreateRequest creationRequest, HeaderResponse headerResponse) {
         return User.builder()
                 .username(creationRequest.username())
                 .email(creationRequest.email())
                 .passwordHash(passwordEncoder.encode(creationRequest.password()))
                 .role(creationRequest.role())
+                .createdBy(headerResponse.userId())
                 .build();
     }
 
@@ -252,13 +253,16 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      * @return The updated, detached {@code User} entity.
      */
     @Override
-    protected User mapToEntity(UserUpdateRequest updateRequest, User entity) {
-        // ... (implementation code) ...
-        entity.setUsername(updateRequest.username());
-        entity.setEmail(updateRequest.email());
+    protected User mapToEntity(UserUpdateRequest updateRequest, User entity, HeaderResponse headerResponse) {
+        if (!StringUtils.isBlank(updateRequest.email())) {
+            entity.setEmail(updateRequest.email());
+        }
+
         if (updateRequest.role() != null) {
             entity.setRole(updateRequest.role());
         }
+
+        entity.setCreatedBy(headerResponse.userId());
         return entity;
     }
 
@@ -292,17 +296,16 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      * @throws DuplicateEntryException if the username or email is already in use by a different user.
      */
     private void checkUniquenessOnUpdate(UUID currentId, String newUsername, String newEmail) {
-        // ... (implementation code) ...
-        // 1. Check Username
         userRepository.findByUsername(newUsername).ifPresent(user -> {
             if (!user.getId().equals(currentId)) {
                 throw DuplicateEntryException.forEntity("User", "username", newUsername);
             }
         });
 
-        // 2. Check Email (Requires UserRepository method: boolean existsByEmailAndIdNot(String email, UUID id);)
-        if (userRepository.existsByEmailAndIdNot(newEmail, currentId)) {
-            throw DuplicateEntryException.forEntity("User", "email", newEmail);
+        if (!StringUtils.isBlank(newEmail)) {
+            if (userRepository.existsByEmailAndIdNot(newEmail, currentId)) {
+                throw DuplicateEntryException.forEntity("User", "email", newEmail);
+            }
         }
     }
 

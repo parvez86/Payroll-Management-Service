@@ -48,5 +48,8 @@ public record TransactionFilter(
     Instant toDate,
     
     @Schema(description = "Search by reference ID or description")
-    String searchText
+    String searchText,
+    
+    @Schema(description = "Filter by creator user ID (admin only)")
+    UUID createdBy
 ) {}

@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.domain.auth.entity.User;
 import org.sp.payroll_service.domain.auth.entity.UserDetailsImpl;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.enums.EntityStatus;
 import org.sp.payroll_service.domain.common.exception.InvalidTokenException;
 import org.sp.payroll_service.repository.TokenInfoRepository;
@@ -55,9 +56,9 @@ public class JwtAuthenticationFilter implements AuthenticationDelegate {
         String requestURI = request.getRequestURI();
         String method = request.getMethod();
         
-        log.error("🔍 [JWT-DEBUG] === AUTHENTICATION ATTEMPT START ===");
-        log.error("🔍 [JWT-DEBUG] Method: {} URI: {}", method, requestURI);
-        log.error("🔍 [JWT-DEBUG] Headers: Authorization = {}", request.getHeader("Authorization"));
+        log.debug("🔍 [JWT-DEBUG] === AUTHENTICATION ATTEMPT START ===");
+        log.debug("🔍 [JWT-DEBUG] Method: {} URI: {}", method, requestURI);
+        log.debug("🔍 [JWT-DEBUG] Headers: Authorization = {}", request.getHeader("Authorization"));
         
         String jwt = extractJwt(request);
         if (!StringUtils.hasText(jwt)) {
@@ -76,46 +77,54 @@ public class JwtAuthenticationFilter implements AuthenticationDelegate {
             String jti = tokenProvider.getJtiFromToken(jwt);
 
             if (!StringUtils.hasText(jti)) {
-                log.error("🔍 [JWT-DEBUG] ❌ TOKEN REJECTED: JTI claim is missing.");
+                log.debug("🔍 [JWT-DEBUG] ❌ TOKEN REJECTED: JTI claim is missing.");
                 throw new InvalidTokenException("Token is missing JTI claim; cannot be tracked.");
             }
 
             if (tokenInfoRepository.existsByAccessJtiAndIsRevokedTrue(jti)) {
                 throw new InvalidTokenException("Token is revoked");
             }
-            log.error("🔍 [JWT-DEBUG] ✅ TOKEN VALIDATION SUCCESSFUL");
+            log.debug("🔍 [JWT-DEBUG] ✅ TOKEN VALIDATION SUCCESSFUL");
 
-            log.error("🔍 [JWT-DEBUG] 🆔 Extracting user ID from token...");
+            log.debug("🔍 [JWT-DEBUG] 🆔 Extracting user ID from token...");
             // 2. Extract user ID and load user from database
             UUID userId = tokenProvider.getUserIdFromJWT(jwt);
-            log.error("🔍 [JWT-DEBUG] ✅ USER ID EXTRACTED: {}", userId);
+            log.debug("🔍 [JWT-DEBUG] ✅ USER ID EXTRACTED: {}", userId);
             
-            log.error("🔍 [JWT-DEBUG] 🔍 Looking up user in database...");
+            log.debug("🔍 [JWT-DEBUG] 🔍 Looking up user in database...");
             User user = userRepository.findByIdAndStatus(userId, EntityStatus.ACTIVE)
                     .orElseThrow(() -> {
-                        log.error("🔍 [JWT-DEBUG] ❌ USER NOT FOUND: User ID {} from token not found in database", userId);
+                        log.debug("🔍 [JWT-DEBUG] ❌ USER NOT FOUND: User ID {} from token not found in database", userId);
                         return new UsernameNotFoundException("User not found: " + userId);
                     });
 
-            log.error("🔍 [JWT-DEBUG] ✅ USER FOUND: {} with role: {}", user.getUsername(), user.getRole());
+            log.debug("🔍 [JWT-DEBUG] ✅ USER FOUND: {} with role: {}", user.getUsername(), user.getRole());
 
-            // 3. Create UserDetails and Authentication object
-            UserDetails userDetails = UserDetailsImpl.create(user);
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    userDetails, null, userDetails.getAuthorities());
+                // 3. Create Authentication principal compatible with @HeaderPrincipal
+                // Build a lightweight principal DTO exposed to controllers
+                    HeaderResponse principal = new HeaderResponse(
+                        user.getId(),
+                    user.getUsername(),
+                    user.getRole(),
+                    jti
+                );
+                // Preserve authorities derived from the user's role
+                UserDetails userDetails = UserDetailsImpl.create(user);
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    principal, null, userDetails.getAuthorities());
 
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-            log.error("� [JWT-DEBUG] ✅ AUTHENTICATION SUCCESSFUL for user: {}", user.getUsername());
+            log.debug("🔍 [JWT-DEBUG] ✅ AUTHENTICATION SUCCESSFUL for user: {}", user.getUsername());
             return authentication;
             
         } catch (InvalidTokenException ex) {
             // Invalid/expired token - log and return null (let other delegates try or fail at Spring Security level)
-            log.error("� [JWT-DEBUG] ❌ TOKEN VALIDATION FAILED: {}", ex.getMessage());
+            log.debug("🔍 [JWT-DEBUG] ❌ TOKEN VALIDATION FAILED: {}", ex.getMessage());
             return null;
         } catch (UsernameNotFoundException ex) {
             // User not found - this is a more serious issue, rethrow
-            log.error("🔍 [JWT-DEBUG] ❌ USER NOT FOUND: {}", ex.getMessage());
+            log.debug("🔍 [JWT-DEBUG] ❌ USER NOT FOUND: {}", ex.getMessage());
             throw ex;
         }
     }

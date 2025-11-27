@@ -60,8 +60,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // ✅ Auth endpoints (POST only)
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
+                        // ✅ Auth endpoints (POST only) - include variants with context path
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/**", "/pms/api/v1/auth/**").permitAll()
                         
                         // ✅ Actuator endpoints (all methods) - all path variants
                         .requestMatchers("/actuator/**", "/pms/actuator/**", "/v1/api/actuator/**", "/api/v1/actuator/**", "/pms/v1/api/actuator/**", "/pms/api/v1/actuator/**").permitAll()

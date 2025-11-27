@@ -48,9 +48,11 @@ public class SalaryDistributionFormulaController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<SalaryDistributionFormulaResponse> createFormula(
-            @Valid @RequestBody SalaryDistributionFormulaCreateRequest request) {
-        log.info("Request to create new salary formula: {}", request.name());
-        SalaryDistributionFormulaResponse response = formulaService.create(request);
+            @Valid @RequestBody SalaryDistributionFormulaCreateRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.info("Request to create new salary formula: {} by {} ({})", request.name(), principal.username(), principal.userId());
+        SalaryDistributionFormulaResponse response = formulaService.create(request, principal);
+        log.info("Salary formula {} created by {}", response.name(), principal.userId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -92,9 +94,12 @@ public class SalaryDistributionFormulaController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<SalaryDistributionFormulaResponse> updateFormula(
             @Parameter(description = "Formula ID") @PathVariable UUID id,
-            @Valid @RequestBody SalaryDistributionFormulaUpdateRequest request) {
-        log.info("Request to update formula with ID: {}", id);
-        return ResponseEntity.ok(formulaService.update(id, request));
+            @Valid @RequestBody SalaryDistributionFormulaUpdateRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.info("Request to update formula with ID: {} by {} ({})", id, principal.username(), principal.userId());
+        ResponseEntity<SalaryDistributionFormulaResponse> response = ResponseEntity.ok(formulaService.update(id, request, principal));
+        log.info("Salary formula with ID: {} updated by {}", id, principal.userId());
+        return response;
     }
 
     /**
@@ -112,9 +117,11 @@ public class SalaryDistributionFormulaController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAnyRole('ADMIN')")
-    public ResponseEntity<Void> deleteFormula(@Parameter(description = "Formula ID") @PathVariable UUID id) {
-        log.warn("Request to delete formula with ID: {}", id);
-        formulaService.delete(id);
+    public ResponseEntity<Void> deleteFormula(@Parameter(description = "Formula ID") @PathVariable UUID id,
+                                              @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.warn("Request to delete formula with ID: {} by {} ({})", id, principal.username(), principal.userId());
+        formulaService.delete(id, principal);
+        log.info("Salary formula with ID: {} deleted by {}", id, principal.userId());
         return ResponseEntity.noContent().build();
     }
 

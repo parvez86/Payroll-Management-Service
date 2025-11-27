@@ -47,18 +47,17 @@ public class AuthenticationFilter extends OncePerRequestFilter {
 
     // ✅ SINGLE SOURCE OF TRUTH (defined here for self-containment)
     private static final List<String> PUBLIC_ENDPOINTS = Arrays.asList(
-            "pms/api/v1/auth/login",
-            "pms/api/v1/auth/register",
-            "pms/api/v1/auth/refresh",
-            "pms/api/v1/actuator/**",
-            "pms/api/v1/health",
-            "pms/v3/api-docs/**",
-            "pms/swagger-ui/**",
-            "pms/swagger-resources/**",
-            "pms/webjars/**"
-    );
-
-    /**
+            "/pms/api/v1/auth/login",
+            "/pms/api/v1/auth/register",
+            "/pms/api/v1/auth/refresh",
+            "/pms/api/v1/actuator/**",
+            "/pms/v1/api/actuator/**",
+            "/pms/api/v1/health",
+            "/pms/v3/api-docs/**",
+            "/pms/swagger-ui/**",
+            "/pms/swagger-resources/**",
+            "/pms/webjars/**"
+    );    /**
      * Constructor for dependency injection. Spring automatically collects all beans
      * that implement {@code AuthenticationDelegate} and injects them as a list.
      *
@@ -96,11 +95,11 @@ public class AuthenticationFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        log.error("🔍 [MAIN-FILTER-DEBUG] URI: {}, Method: {}", request.getRequestURI(), request.getMethod());
+        log.debug("🔍 [MAIN-FILTER-DEBUG] URI: {}, Method: {}", request.getRequestURI(), request.getMethod());
 
         // Check if authentication is already present (e.g., from a previous filter in the chain)
         if (SecurityContextHolder.getContext().getAuthentication() != null) {
-            log.error("🔍 [MAIN-FILTER-DEBUG] ✅ AUTHENTICATION ALREADY SET - Skipping");
+            log.debug("🔍 [MAIN-FILTER-DEBUG] ✅ AUTHENTICATION ALREADY SET - Skipping");
             filterChain.doFilter(request, response);
             return;
         }
@@ -112,21 +111,21 @@ public class AuthenticationFilter extends OncePerRequestFilter {
             // 1. Iterate through delegates and attempt authentication
             for (AuthenticationDelegate delegate : delegates) {
                 try {
-                    log.error("🔍 [MAIN-FILTER-DEBUG] 🔄 Trying delegate: {}", delegate.getClass().getSimpleName());
+                    log.debug("🔍 [MAIN-FILTER-DEBUG] 🔄 Trying delegate: {}", delegate.getClass().getSimpleName());
                     authentication = delegate.attemptAuthentication(request);
                     
                     if (authentication != null) {
-                        log.error("🔍 [MAIN-FILTER-DEBUG] ✅ DELEGATE SUCCESS: {} authenticated user", delegate.getClass().getSimpleName());
+                        log.debug("🔍 [MAIN-FILTER-DEBUG] ✅ DELEGATE SUCCESS: {} authenticated user", delegate.getClass().getSimpleName());
                         authenticationAttempted = true;
                         break;
                     } else {
-                        log.error("🔍 [MAIN-FILTER-DEBUG] 🔄 DELEGATE RETURNED NULL: {}", delegate.getClass().getSimpleName());
+                        log.debug("🔍 [MAIN-FILTER-DEBUG] 🔄 DELEGATE RETURNED NULL: {}", delegate.getClass().getSimpleName());
                         // If JWT was present but returned null, consider this an authentication attempt
                         if (delegate.getClass().getSimpleName().contains("Jwt")) {
                             String authHeader = request.getHeader("Authorization");
                             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                                 authenticationAttempted = true;
-                                log.error("🔍 [MAIN-FILTER-DEBUG] ❌ JWT DELEGATE FAILED WITH TOKEN PRESENT");
+                                log.debug("🔍 [MAIN-FILTER-DEBUG] ❌ JWT DELEGATE FAILED WITH TOKEN PRESENT");
                             }
                         }
                     }
@@ -142,17 +141,17 @@ public class AuthenticationFilter extends OncePerRequestFilter {
             // 2. Set context if authentication was successful
             if (authentication != null) {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.error("� [MAIN-FILTER-DEBUG] ✅ AUTHENTICATION SET: User {} authenticated", authentication.getName());
+                log.debug("🔍 [MAIN-FILTER-DEBUG] ✅ AUTHENTICATION SET: User {} authenticated", authentication.getName());
             } else {
-                log.error("🔍 [MAIN-FILTER-DEBUG] ❌ NO AUTHENTICATION: All delegates failed");
+                log.debug("🔍 [MAIN-FILTER-DEBUG] ❌ NO AUTHENTICATION: All delegates failed");
                 
                 // If authentication was attempted but failed (especially with JWT), don't continue
                 if (authenticationAttempted) {
-                    log.error("🔍 [MAIN-FILTER-DEBUG] ❌ AUTHENTICATION ATTEMPTED BUT FAILED - BLOCKING REQUEST");
+                    log.debug("🔍 [MAIN-FILTER-DEBUG] ❌ AUTHENTICATION ATTEMPTED BUT FAILED - BLOCKING REQUEST");
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.getWriter().write("{\"error\":\"Authentication failed\",\"message\":\"Invalid or expired token\"}");
                     response.setContentType("application/json");
-                    log.error("🔍 [MAIN-FILTER-DEBUG] === MAIN FILTER END (401 SENT) ===");
+                    log.debug("🔍 [MAIN-FILTER-DEBUG] === MAIN FILTER END (401 SENT) ===");
                     return;
                 }
             }
@@ -162,7 +161,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
             log.error("❌ AUTH FILTER CRITICAL ERROR: {} - {}", request.getRequestURI(), ex.getMessage(), ex);
         }
 
-        log.error("🔍 [MAIN-FILTER-DEBUG] === MAIN FILTER END (CONTINUING TO NEXT FILTER) ===");
+        log.debug("🔍 [MAIN-FILTER-DEBUG] === MAIN FILTER END (CONTINUING TO NEXT FILTER) ===");
         filterChain.doFilter(request, response);
     }
 }

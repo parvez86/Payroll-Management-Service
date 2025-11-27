@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
+import org.sp.payroll_service.domain.common.enums.TransactionCategory;
+import org.sp.payroll_service.domain.common.enums.TransactionType;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -32,5 +34,20 @@ public record TransferRequest(
     String referenceId,
     
     @Schema(description = "Description of the transfer", example = "Salary payment for October 2025")
-    String description
+    String description,
+
+    @Schema(description = "Payroll batch ID (for batch-related transfers)", example = "123e4567-e89b-12d3-a456-426614174002")
+    UUID payrollBatchId,
+
+    @Schema(description = "Payroll item ID (for linking to specific salary item)", example = "123e4567-e89b-12d3-a456-426614174003")
+    UUID payrollItemId,
+
+    @Schema(description = "Transaction type (auto-detected if not specified)", example = "SALARY_DISBURSEMENT")
+    TransactionType transactionType,
+
+    @Schema(description = "Transaction category (auto-detected if not specified)", example = "PAYROLL")
+    TransactionCategory transactionCategory,
+
+    @Schema(description = "Transaction created by")
+    UUID createdBy
 ) {}

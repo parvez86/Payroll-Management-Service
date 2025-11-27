@@ -5,6 +5,7 @@ import org.sp.payroll_service.api.core.dto.GradeCreateRequest;
 import org.sp.payroll_service.api.core.dto.GradeFilter;
 import org.sp.payroll_service.api.core.dto.GradeResponse;
 import org.sp.payroll_service.api.core.dto.GradeUpdateRequest;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
 import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
 import org.sp.payroll_service.domain.common.service.AbstractCrudService;
@@ -48,31 +49,38 @@ public class GradeServiceImpl extends AbstractCrudService<
     @Override
     @Transactional
     // FIX: Changed return type from CompletableFuture<GradeResponse> to GradeResponse
-    public GradeResponse create(GradeCreateRequest request) {
+    public GradeResponse create(GradeCreateRequest request, HeaderResponse principal) {
         // Business Rule 1: Check uniqueness of name (blocking call)
         if (gradeRepository.existsByName(request.name())) {
             throw DuplicateEntryException.forEntity("Grade", "name", request.name());
         }
 
         // Business Rule 2: Validation of parent existence (Handled in mapToEntity)
-        return super.create(request);
+        return super.create(request, principal);
     }
 
     @Override
     @Transactional
     // FIX: Changed return type from CompletableFuture<GradeResponse> to GradeResponse
-    public GradeResponse update(UUID id, GradeUpdateRequest request) {
+    public GradeResponse update(UUID id, GradeUpdateRequest request, HeaderResponse principal) {
         // Business Rule 1: Check uniqueness of name (excluding current entity) (blocking call)
         if (gradeRepository.existsByNameAndIdNot(request.name(), id)) {
             throw DuplicateEntryException.forEntity("Grade", "name", request.name());
         }
-        return super.update(id, request);
+        return super.update(id, request, principal);
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID id, org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.warn("Deleting grade {} by {} ({})", id, principal.username(), principal.userId());
+        super.delete(id, principal);
     }
 
     // --- Abstract Mapping Implementations (No changes needed) ---
 
     @Override
-    protected Grade mapToEntity(GradeCreateRequest creationRequest) {
+    protected Grade mapToEntity(GradeCreateRequest creationRequest, HeaderResponse headerResponse) {
         // NOTE: getParentOrNull contains a blocking JPA call, which is fine in this synchronous service method.
         Grade parent = getParentOrNull(creationRequest.parentId());
 
@@ -83,15 +91,17 @@ public class GradeServiceImpl extends AbstractCrudService<
                 .name(creationRequest.name())
                 .rank(rank)
                 .parent(parent)
+                .createdBy(headerResponse.userId())
                 .build();
     }
 
     @Override
-    protected Grade mapToEntity(GradeUpdateRequest updateRequest, Grade entity) {
+    protected Grade mapToEntity(GradeUpdateRequest updateRequest, Grade entity, HeaderResponse headerResponse) {
         Grade parent = getParentOrNull(updateRequest.parentId());
 
         entity.setName(updateRequest.name());
         entity.setParent(parent);
+        entity.setUpdatedBy(headerResponse.userId());
 
         if (parent != null) {
             entity.setRank(parent.getRank() + 1);

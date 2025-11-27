@@ -7,6 +7,7 @@ import org.sp.payroll_service.api.core.dto.GradeResponse;
 import org.sp.payroll_service.api.payroll.dto.*;
 import org.sp.payroll_service.api.wallet.dto.AccountResponse;
 import org.sp.payroll_service.domain.auth.entity.User;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.enums.AccountType;
 import org.sp.payroll_service.domain.common.enums.EntityStatus;
 import org.sp.payroll_service.domain.common.enums.OwnerType;
@@ -105,7 +106,7 @@ public class EmployeeServiceImpl extends AbstractCrudService<
 
     @Override
     @Transactional
-    public EmployeeResponse create(CreateEmployeeRequest request) {
+    public EmployeeResponse create(CreateEmployeeRequest request, HeaderResponse principal) {
         log.info("Attempting to create employee with code: {}", request.bizId());
 
         // 1. Business Rule: Check uniqueness of the employee code
@@ -132,7 +133,7 @@ public class EmployeeServiceImpl extends AbstractCrudService<
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("Company", "default"));
 
         // Delegation to super.create will trigger mapToEntity() for final object assembly and persistence
-        return super.create(request);
+        return super.create(request, principal);
     }
 
     /**
@@ -141,7 +142,7 @@ public class EmployeeServiceImpl extends AbstractCrudService<
      */
     @Override
     @Transactional
-    public EmployeeResponse update(UUID id, EmployeeUpdateRequest request) {
+    public EmployeeResponse update(UUID id, EmployeeUpdateRequest request, HeaderResponse principal) {
         Employee existingEmployee = employeeRepository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("Employee", id));
 
@@ -209,13 +210,13 @@ public class EmployeeServiceImpl extends AbstractCrudService<
         }
 
         // 4. Delegate to abstract base class for simple field mapping and final save
-        return super.update(id, request);
+        return super.update(id, request, principal);
     }
 
     // --- Abstract Mapping Implementations ---
 
     @Override
-    protected Employee mapToEntity(CreateEmployeeRequest creationRequest) {
+    protected Employee mapToEntity(CreateEmployeeRequest creationRequest, HeaderResponse headerResponse) {
         // Fetch entities (assuming lookups are successful based on checks in create())
         Grade grade = gradeRepository.findById(creationRequest.gradeId())
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("Grade", creationRequest.gradeId()));
@@ -278,7 +279,7 @@ public class EmployeeServiceImpl extends AbstractCrudService<
     }
 
     @Override
-    protected Employee mapToEntity(EmployeeUpdateRequest updateRequest, Employee entity) {
+    protected Employee mapToEntity(EmployeeUpdateRequest updateRequest, Employee entity, HeaderResponse headerResponse) {
         // Apply changes only if the field is NOT null (robust PATCH behavior)
         
         // Basic employee fields

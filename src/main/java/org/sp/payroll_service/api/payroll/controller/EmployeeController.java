@@ -13,12 +13,14 @@ import org.sp.payroll_service.api.payroll.dto.EmployeeFilterRequest;
 import org.sp.payroll_service.api.payroll.dto.EmployeeResponse;
 import org.sp.payroll_service.api.payroll.dto.EmployeeUpdateRequest;
 import org.sp.payroll_service.api.payroll.dto.PageResponse;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.payroll.service.EmployeeService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -49,9 +51,11 @@ public class EmployeeController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<EmployeeResponse> createEmployee(
-            @Valid @RequestBody CreateEmployeeRequest request) {
-        log.info("Creating new employee with bizId: {}", request.bizId());
-        EmployeeResponse employee = employeeService.create(request);
+            @Valid @RequestBody CreateEmployeeRequest request,
+            @AuthenticationPrincipal HeaderResponse principal) {
+        log.info("Creating new employee with bizId: {} by {} ({})", request.bizId(), principal.username(), principal.userId());
+        EmployeeResponse employee = employeeService.create(request, principal);
+        log.info("Employee {} created by {}", employee.code(), principal.userId());
         return ResponseEntity.status(HttpStatus.CREATED).body(employee);
     }
 
@@ -137,9 +141,12 @@ public class EmployeeController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<EmployeeResponse> updateEmployee(
             @Parameter(description = "Employee ID") @PathVariable UUID employeeId,
-            @Valid @RequestBody EmployeeUpdateRequest request) {
-        log.info("Updating employee: {}", employeeId);
-        return ResponseEntity.ok(employeeService.update(employeeId, request));
+            @Valid @RequestBody EmployeeUpdateRequest request,
+            @AuthenticationPrincipal HeaderResponse principal) {
+        log.info("Updating employee: {} by {} ({})", employeeId, principal.username(), principal.userId());
+        EmployeeResponse updated = employeeService.update(employeeId, request, principal);
+        log.info("Employee {} updated by {}", employeeId, principal.userId());
+        return ResponseEntity.ok(updated);
     }
 
     // --- DELETE ---
@@ -154,9 +161,11 @@ public class EmployeeController {
     @DeleteMapping("/{employeeId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteEmployee(
-            @Parameter(description = "Employee ID") @PathVariable UUID employeeId) {
-        log.warn("Deleting employee: {}", employeeId);
-        employeeService.delete(employeeId);
+            @Parameter(description = "Employee ID") @PathVariable UUID employeeId,
+            @AuthenticationPrincipal HeaderResponse principal) {
+        log.warn("Deleting employee: {} by {} ({})", employeeId, principal.username(), principal.userId());
+        employeeService.delete(employeeId, principal);
+        log.info("Employee {} deleted by {}", employeeId, principal.userId());
         return ResponseEntity.noContent().build();
     }
 

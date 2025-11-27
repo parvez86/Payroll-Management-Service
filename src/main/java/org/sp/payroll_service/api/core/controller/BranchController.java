@@ -53,10 +53,12 @@ public class BranchController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BranchResponse> createBranch(
-            @Valid @RequestBody BranchCreateRequest request) {
-        log.info("Request to create new branch: {} for bank {}", request.branchName(), request.bankId());
+            @Valid @RequestBody BranchCreateRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.info("Request to create new branch: {} for bank {} by {} ({})", request.branchName(), request.bankId(), principal.username(), principal.userId());
         // Synchronous call
-        BranchResponse response = branchService.create(request);
+        BranchResponse response = branchService.create(request, principal);
+        log.info("Branch {} created by {}", response.id(), principal.userId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -91,9 +93,10 @@ public class BranchController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BranchResponse> updateBranch(
             @PathVariable UUID id,
-            @Valid @RequestBody BranchUpdateRequest request) {
-        log.info("Request to update branch with ID: {}", id);
-        return ResponseEntity.ok(branchService.update(id, request));
+            @Valid @RequestBody BranchUpdateRequest request,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.info("Request to update branch with ID: {} by {} ({})", id, principal.username(), principal.userId());
+        return ResponseEntity.ok(branchService.update(id, request, principal));
     }
 
     /**
@@ -108,9 +111,10 @@ public class BranchController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> deleteBranch(@PathVariable UUID id) {
-        log.warn("Request to delete branch with ID: {}", id);
-        branchService.delete(id);
+    public ResponseEntity<Void> deleteBranch(@PathVariable UUID id,
+                                             @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.warn("Request to delete branch with ID: {} by {} ({})", id, principal.username(), principal.userId());
+        branchService.delete(id, principal);
         return ResponseEntity.noContent().build();
     }
 

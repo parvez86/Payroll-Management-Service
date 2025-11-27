@@ -1,6 +1,7 @@
 package org.sp.payroll_service.domain.common.service;
 
 import org.sp.payroll_service.api.payroll.dto.PageResponse;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.springframework.data.domain.Pageable; // Added for Pageable parameter
 
 import java.util.List;
@@ -19,11 +20,11 @@ import java.util.List;
 public interface BaseCrudService<ID, R, C, U, F> {
 
     // Basic CRUD Operations
-    R create(C request);
+    R create(C request, HeaderResponse principal);
     R findById(ID id);
     List<R> findAll();
-    R update(ID id, U request);
-    void delete(ID id);
+    R update(ID id, U request, HeaderResponse principal);
+    void delete(ID id, HeaderResponse principal);
 
     // Advanced Query Operations
 

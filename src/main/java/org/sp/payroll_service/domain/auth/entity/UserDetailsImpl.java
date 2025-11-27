@@ -42,6 +42,10 @@ public class UserDetailsImpl implements UserDetails {
         return id;
     }
 
+    public Role getRole() {
+        return role;
+    }
+
     @Override
     public String getUsername() {
         return username;

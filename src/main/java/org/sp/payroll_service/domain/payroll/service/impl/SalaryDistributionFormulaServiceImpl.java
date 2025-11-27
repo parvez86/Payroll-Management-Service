@@ -2,6 +2,7 @@ package org.sp.payroll_service.domain.payroll.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.api.payroll.dto.*;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
 import org.sp.payroll_service.domain.common.service.AbstractCrudService;
 import org.sp.payroll_service.domain.payroll.entity.SalaryDistributionFormula;
@@ -54,60 +55,64 @@ public class SalaryDistributionFormulaServiceImpl extends AbstractCrudService<
     /**
      * Creates a new salary formula after performing a uniqueness check on the formula name.
      *
-     * @param request The DTO containing the formula creation data.
+     * @param request   The DTO containing the formula creation data.
+     * @param principal
      * @return The {@code SalaryDistributionFormulaResponse} DTO of the newly created formula.
      * @throws DuplicateEntryException if a formula with the same name already exists.
      */
     @Override
     @Transactional
     // FIX: Removed CompletableFuture<...>
-    public SalaryDistributionFormulaResponse create(SalaryDistributionFormulaCreateRequest request) {
+    public SalaryDistributionFormulaResponse create(SalaryDistributionFormulaCreateRequest request, HeaderResponse principal) {
         // Business Rule: Check uniqueness of the formula name before persisting (blocking call)
         if (formulaRepository.existsByName(request.name())) {
             throw DuplicateEntryException.forEntity("SalaryFormula", "name", request.name());
         }
-        return super.create(request); // Delegates to abstract base class logic
+        return super.create(request, principal); // Delegates to abstract base class logic
     }
 
     /**
      * Updates an existing salary formula, performing a uniqueness check on the new name.
      *
-     * @param id The ID of the formula to update.
-     * @param request The DTO containing the update data.
+     * @param id        The ID of the formula to update.
+     * @param request   The DTO containing the update data.
+     * @param principal
      * @return The {@code SalaryDistributionFormulaResponse} DTO of the updated formula.
      * @throws DuplicateEntryException if the new name is already taken by another formula.
      */
     @Override
     @Transactional
     // FIX: Removed CompletableFuture<...>
-    public SalaryDistributionFormulaResponse update(UUID id, SalaryDistributionFormulaUpdateRequest request) {
+    public SalaryDistributionFormulaResponse update(UUID id, SalaryDistributionFormulaUpdateRequest request, HeaderResponse principal) {
         // Business Rule: Check uniqueness of the name, excluding the current entity (blocking call)
         checkUniquenessOnUpdate(id, request.name());
 
         // Delegate to abstract base class logic for fetching and mapping
-        return super.update(id, request);
+        return super.update(id, request, principal);
     }
 
     // --- Abstract Mapping Implementations (No changes needed) ---
 
     @Override
-    protected SalaryDistributionFormula mapToEntity(SalaryDistributionFormulaCreateRequest creationRequest) {
+    protected SalaryDistributionFormula mapToEntity(SalaryDistributionFormulaCreateRequest creationRequest, HeaderResponse headerResponse) {
         return SalaryDistributionFormula.builder()
                 .name(creationRequest.name())
                 .baseSalaryGrade(creationRequest.baseSalaryGrade())
                 .hraPercentage(creationRequest.hraPercentage())
                 .medicalPercentage(creationRequest.medicalPercentage())
                 .gradeIncrementAmount(creationRequest.gradeIncrementAmount())
+                .createdBy(headerResponse.userId())
                 .build();
     }
 
     @Override
-    protected SalaryDistributionFormula mapToEntity(SalaryDistributionFormulaUpdateRequest updateRequest, SalaryDistributionFormula entity) {
+    protected SalaryDistributionFormula mapToEntity(SalaryDistributionFormulaUpdateRequest updateRequest, SalaryDistributionFormula entity, HeaderResponse headerResponse) {
         entity.setName(updateRequest.name());
         entity.setBaseSalaryGrade(updateRequest.baseSalaryGrade());
         entity.setHraPercentage(updateRequest.hraPercentage());
         entity.setMedicalPercentage(updateRequest.medicalPercentage());
         entity.setGradeIncrementAmount(updateRequest.gradeIncrementAmount());
+        entity.setUpdatedBy(headerResponse.userId());
         return entity;
     }
 
@@ -167,5 +172,12 @@ public class SalaryDistributionFormulaServiceImpl extends AbstractCrudService<
 
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
+    }
+
+    @Override
+    @Transactional
+    public void delete(UUID id, org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+        log.warn("Deleting salary formula {} by {} ({})", id, principal.username(), principal.userId());
+        super.delete(id, principal);
     }
 }
