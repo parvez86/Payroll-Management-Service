@@ -67,12 +67,13 @@ public class EmployeeController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER', 'EMPLOYEE')")
     public ResponseEntity<PageResponse<EmployeeResponse>> getAllEmployees(
             @Parameter(description = "Filter criteria") @ModelAttribute EmployeeFilterRequest filter,
-            @PageableDefault(size = 20, sort = "grade.rank") Pageable pageable) {
-        log.debug("Retrieving employees with filter: {}", filter);
-        return ResponseEntity.ok(employeeService.search(filter, pageable));
+            @PageableDefault(size = 20, sort = "grade.rank") Pageable pageable,
+            @AuthenticationPrincipal HeaderResponse headerResponse) {
+        log.debug("Retrieving employees with filter: {}, header: {}", filter, headerResponse);
+        return ResponseEntity.ok(employeeService.search(filter, pageable, headerResponse));
     }
 
     @Operation(summary = "Get employee by ID")
@@ -121,11 +122,12 @@ public class EmployeeController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<PageResponse<EmployeeResponse>> getEmployeesByGrade(
             @Parameter(description = "Grade ID") @PathVariable UUID gradeId,
-            @PageableDefault(size = 20, sort = "name") Pageable pageable) {
+            @PageableDefault(size = 20, sort = "name") Pageable pageable,
+            @AuthenticationPrincipal HeaderResponse headerResponse) {
         log.debug("Retrieving employees for grade: {}", gradeId);
         EmployeeFilterRequest filter = new EmployeeFilterRequest(
                 null, null, null, gradeId, null, null);
-        return ResponseEntity.ok(employeeService.search(filter, pageable));
+        return ResponseEntity.ok(employeeService.search(filter, pageable, headerResponse));
     }
 
     // --- UPDATE ---

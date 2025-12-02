@@ -10,6 +10,7 @@ import org.sp.payroll_service.api.core.dto.BranchFilter;
 import org.sp.payroll_service.api.core.dto.BranchResponse;
 import org.sp.payroll_service.api.core.dto.BranchUpdateRequest;
 import org.sp.payroll_service.api.payroll.dto.PageResponse;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.core.service.BranchService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +18,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -133,8 +135,9 @@ public class BranchController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER', 'ACCOUNTANT')")
     public ResponseEntity<PageResponse<BranchResponse>> searchBranches(
             @ModelAttribute BranchFilter filter,
-            @PageableDefault(size = 20, sort = "branchName") Pageable pageable) {
+            @PageableDefault(size = 20, sort = "branchName") Pageable pageable,
+            @AuthenticationPrincipal HeaderResponse headerResponse) {
         log.debug("Request to search branches with filters: {}", filter);
-        return ResponseEntity.ok(branchService.search(filter, pageable));
+        return ResponseEntity.ok(branchService.search(filter, pageable, headerResponse));
     }
 }

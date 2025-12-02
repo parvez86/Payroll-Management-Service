@@ -179,6 +179,8 @@
         </rollback>
     </changeSet>
 
+    <!-- employer user seeding reverted per request -->
+
     <changeSet id="021-insert-company-data" author="payroll-service">
         <comment>Insert initial company data for development environment</comment>
 

@@ -88,4 +88,35 @@ public interface EmployeeRepository extends BaseRepository<Employee, UUID> {
     // We are now casting the String 'bizId' field to an Integer type for the MAX aggregation.
     @Query("SELECT COALESCE(MAX(CAST(e.code AS integer)),1) FROM Employee e")
     int findMaxIdNumber();
+    
+    /**
+     * Find all employees in a company with a lower grade rank (subordinates).
+     * Used for hierarchical access control by EMPLOYEE role.
+     * 
+     * @param companyId the company ID
+     * @param rank the current employee's grade rank
+     * @return list of employees with lower ranks (higher rank number = lower position)
+     */
+    @Query("SELECT e FROM Employee e " +
+           "JOIN e.grade g " +
+           "WHERE e.company.id = :companyId " +
+           "AND g.rank > :rank " +
+           "ORDER BY g.rank ASC, e.name ASC")
+    List<Employee> findByCompanyIdAndGradeRankGreaterThan(
+        @Param("companyId") UUID companyId,
+        @Param("rank") Integer rank
+    );
+    
+    /**
+     * Find all employees in a specific company ordered by grade rank.
+     * Used for payroll batch generation to ensure only company employees are included.
+     * 
+     * @param companyId the company ID
+     * @return list of employees in the company ordered by grade
+     */
+    @Query("SELECT e FROM Employee e " +
+           "JOIN FETCH e.grade g " +
+           "WHERE e.company.id = :companyId " +
+           "ORDER BY g.rank ASC, e.name ASC")
+    List<Employee> findAllByCompanyIdOrderByGrade(@Param("companyId") UUID companyId);
 }

@@ -86,9 +86,10 @@ public class GradeController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PageResponse<GradeResponse>> searchGrades(
             @ModelAttribute GradeFilter filter,
-            @PageableDefault(sort = {"rank", "name"}) Pageable pageable) {
-        log.debug("Request to search grades with filters: {}", filter);
-        return ResponseEntity.ok(gradeService.search(filter, pageable));
+            @PageableDefault(sort = {"rank", "name"}) Pageable pageable,
+            @AuthenticationPrincipal HeaderResponse headerResponse) {
+        log.debug("Request to search grades with filters: {}, principal: {}", filter, headerResponse);
+        return ResponseEntity.ok(gradeService.search(filter, pageable, headerResponse));
     }
 
     @Operation(summary = "Get all Grades (non-paginated list, typically for dropdowns).")

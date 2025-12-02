@@ -16,6 +16,7 @@ import org.sp.payroll_service.api.core.dto.CompanyUpdateRequest;
 import org.sp.payroll_service.api.payroll.dto.PageResponse;
 import org.sp.payroll_service.api.payroll.dto.TransactionResponse;
 import org.sp.payroll_service.api.wallet.dto.AccountResponse;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.core.service.CompanyService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,6 +24,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -107,9 +109,10 @@ public class CompanyController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<PageResponse<CompanyResponse>> searchCompanies(
             @ModelAttribute CompanyFilter filter,
-            @PageableDefault(size = 20, sort = "name") Pageable pageable) {
+            @PageableDefault(size = 20, sort = "name") Pageable pageable,
+            @AuthenticationPrincipal HeaderResponse headerResponse) {
         log.debug("Request to search companies with filters: {}", filter);
-        return ResponseEntity.ok(companyService.search(filter, pageable));
+        return ResponseEntity.ok(companyService.search(filter, pageable, headerResponse));
     }
 
     /**
@@ -117,7 +120,7 @@ public class CompanyController {
      */
     @Operation(summary = "Top-up company account balance")
     @PostMapping("/{companyId}/topup")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<CompanyResponse> topUpCompanyAccount(
             @PathVariable UUID companyId,
             @RequestBody CompanyTopUpRequest request) {

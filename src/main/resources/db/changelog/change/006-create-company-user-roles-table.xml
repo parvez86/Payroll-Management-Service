@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="006-create-company-user-roles-table" author="system">
+        <comment>Create company_user_roles association table for scalable company authorization</comment>
+
+        <createTable tableName="company_user_roles">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="company_id" type="UUID">
+                <constraints nullable="false" 
+                             foreignKeyName="fk_company_user_role_company"
+                             references="companies(id)"
+                             deleteCascade="false"/>
+            </column>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false"
+                             foreignKeyName="fk_company_user_role_user"
+                             references="users(id)"
+                             deleteCascade="false"/>
+            </column>
+            <column name="role_on_company" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="access_scope" type="VARCHAR(50)" defaultValue="FULL">
+                <constraints nullable="true"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="valid_from" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="valid_to" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_by" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_by" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+
+        <!-- Indexes for performance -->
+        <createIndex indexName="idx_company_user_active" tableName="company_user_roles">
+            <column name="company_id"/>
+            <column name="user_id"/>
+            <column name="active"/>
+        </createIndex>
+
+        <createIndex indexName="idx_user_active" tableName="company_user_roles">
+            <column name="user_id"/>
+            <column name="active"/>
+        </createIndex>
+
+        <createIndex indexName="idx_company_role" tableName="company_user_roles">
+            <column name="company_id"/>
+            <column name="role_on_company"/>
+        </createIndex>
+
+        <!-- Unique constraint: one user can have one role per company -->
+        <addUniqueConstraint
+                tableName="company_user_roles"
+                columnNames="company_id, user_id, role_on_company"
+                constraintName="uk_company_user_role"/>
+
+    </changeSet>
+
+</databaseChangeLog>

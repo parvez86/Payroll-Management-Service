@@ -8,6 +8,8 @@ import org.sp.payroll_service.api.payroll.dto.TransferRequest;
 import org.sp.payroll_service.api.payroll.mapper.TransactionMapper;
 import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.dto.response.Money;
+import org.sp.payroll_service.domain.common.enums.CompanyRoleType;
+import org.sp.payroll_service.domain.common.enums.OwnerType;
 import org.sp.payroll_service.domain.common.enums.Role;
 import org.sp.payroll_service.domain.common.enums.TransactionStatus;
 import org.sp.payroll_service.domain.common.exception.AuthorizationException;
@@ -15,10 +17,13 @@ import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
 import org.sp.payroll_service.domain.payroll.entity.PayrollBatch;
 import org.sp.payroll_service.domain.payroll.entity.PayrollItem;
 import org.sp.payroll_service.domain.payroll.entity.Transaction;
+import org.sp.payroll_service.domain.payroll.exception.InsufficientFundsException;
+import org.sp.payroll_service.domain.payroll.exception.PayrollProcessingException;
 import org.sp.payroll_service.domain.payroll.service.TransactionService;
 import org.sp.payroll_service.domain.payroll.service.transaction.TransactionStrategyService;
 import org.sp.payroll_service.domain.wallet.entity.Account;
 import org.sp.payroll_service.repository.AccountRepository;
+import org.sp.payroll_service.repository.CompanyUserRoleRepository;
 import org.sp.payroll_service.repository.PayrollBatchRepository;
 import org.sp.payroll_service.repository.PayrollItemRepository;
 import org.sp.payroll_service.repository.TransactionRepository;
@@ -53,6 +58,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionStrategyService transactionStrategyService;
     private final PayrollBatchRepository payrollBatchRepository;
     private final PayrollItemRepository payrollItemRepository;
+    private final CompanyUserRoleRepository companyUserRoleRepository;
 
     @Override
     @Transactional(isolation = Isolation.SERIALIZABLE)
@@ -61,7 +67,7 @@ public class TransactionServiceImpl implements TransactionService {
                 request.amount(), request.debitAccountId(), request.creditAccountId(), principal.username(), principal.userId());
 
         // SECURITY: Get current user for audit trail
-        UUID currentUserId = principal != null ? principal.userId() : null;
+        UUID currentUserId = principal.userId();
         if (currentUserId == null) {
             throw new IllegalStateException("Cannot execute transfer: User not authenticated");
         }
@@ -144,14 +150,14 @@ public class TransactionServiceImpl implements TransactionService {
 
             return transactionMapper.toResponse(savedTransaction);
 
-        } catch (ResourceNotFoundException | IllegalArgumentException | 
-                 org.sp.payroll_service.domain.payroll.exception.InsufficientFundsException e) {
+        } catch (ResourceNotFoundException | IllegalArgumentException |
+                 InsufficientFundsException e) {
             log.warn("Transfer rejected: {} - {}", request.referenceId(), e.getMessage());
             throw e;
         } catch (Exception e) {
             log.error("Transfer failed: {} from {} to {} - {}",
                     request.amount(), request.debitAccountId(), request.creditAccountId(), e.getMessage(), e);
-            throw new org.sp.payroll_service.domain.payroll.exception.PayrollProcessingException(
+            throw new PayrollProcessingException(
                 "Transfer execution failed: " + e.getMessage(), e);
         }
     }
@@ -363,7 +369,19 @@ public class TransactionServiceImpl implements TransactionService {
             return true;
         }
 
-        // User can only access accounts they own
-        return account.getOwnerId().equals(userId);
+        // User can access accounts they own (employee personal accounts)
+        if (account.getOwnerId().equals(userId)) {
+            return true;
+        }
+
+        // Employer can access company funding accounts
+        if (role == Role.EMPLOYER && account.getOwnerType() == OwnerType.COMPANY) {
+            // Check if user has EMPLOYER role on this company
+            UUID companyId = account.getOwnerId();
+            return companyUserRoleRepository.existsByUser_IdAndCompany_IdAndRoleOnCompanyAndActiveTrue(
+                    userId, companyId, CompanyRoleType.EMPLOYER);
+        }
+
+        return false;
     }
 }

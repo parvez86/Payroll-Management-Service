@@ -15,6 +15,7 @@ import org.sp.payroll_service.domain.common.enums.Role;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
 import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
 import org.sp.payroll_service.domain.common.service.AbstractCrudService;
+import org.sp.payroll_service.domain.common.service.AuthorizationService;
 import org.sp.payroll_service.domain.core.entity.Branch;
 import org.sp.payroll_service.domain.core.entity.Company;
 import org.sp.payroll_service.domain.core.entity.Grade;
@@ -22,6 +23,7 @@ import org.sp.payroll_service.domain.payroll.entity.Employee;
 import org.sp.payroll_service.domain.payroll.service.EmployeeService;
 import org.sp.payroll_service.domain.wallet.entity.Account;
 import org.sp.payroll_service.repository.*;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -59,6 +61,7 @@ public class EmployeeServiceImpl extends AbstractCrudService<
     private final AccountRepository accountRepository;
     private final BranchRepository branchRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuthorizationService authorizationService;
 
     public EmployeeServiceImpl(
             EmployeeRepository employeeRepository,
@@ -67,7 +70,8 @@ public class EmployeeServiceImpl extends AbstractCrudService<
             CompanyRepository companyRepository,
             AccountRepository accountRepository,
             BranchRepository branchRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            AuthorizationService authorizationService) {
         super(employeeRepository, "Employee");
         this.employeeRepository = employeeRepository;
         this.userRepository = userRepository;
@@ -76,6 +80,7 @@ public class EmployeeServiceImpl extends AbstractCrudService<
         this.accountRepository = accountRepository;
         this.branchRepository = branchRepository;
         this.passwordEncoder = passwordEncoder;
+        this.authorizationService = authorizationService;
     }
 
     // --- Overrides for Creation and Update with Business Logic ---
@@ -462,6 +467,33 @@ public class EmployeeServiceImpl extends AbstractCrudService<
         return employeeRepository.findMaxIdNumber()+1;
     }
 
+    /**
+     * Override search to apply role-based access control before executing the query.
+     * This ensures ADMIN/EMPLOYER/EMPLOYEE see only the data they're authorized to access.
+     * Delegates authorization logic to AuthorizationService for reusability.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<EmployeeResponse> search(EmployeeFilterRequest filter, org.springframework.data.domain.Pageable pageable, HeaderResponse principal) {
+        log.debug("Searching employees with filter: {} by {} ({})", filter, principal.username(), principal.role());
+        
+        // 1. Build base filter specification from request
+        Specification<Employee> spec = buildSpecificationFromFilter(filter);
+        
+        // 2. Apply role-based access control (delegated to AuthorizationService)
+        spec = spec.and(authorizationService.applyEmployeeAccessFilter(principal));
+        
+        // 3. Execute query
+        Page<Employee> entityPage = employeeRepository.findAll(spec, pageable);
+        
+        log.debug("Found {} employees for {} ({})", entityPage.getTotalElements(), principal.username(), principal.role());
+        
+        return PageResponse.from(
+            mapToResponse(entityPage.getContent()),
+            entityPage.getTotalElements(),
+            entityPage.getPageable()
+        );
+    }
 
     /**
      * Override buildSpecificationFromFilter to provide custom filtering logic.
@@ -469,6 +501,7 @@ public class EmployeeServiceImpl extends AbstractCrudService<
      * Applies industry-grade practices:
      * - Robust filter handling (null-safe, trimmed, case-insensitive)
      * - Complete pagination metadata preservation
+     * - Role-based access control (ADMIN, EMPLOYER, EMPLOYEE)
      */
     @Override
     protected Specification<Employee> buildSpecificationFromFilter(EmployeeFilterRequest filter) {
@@ -487,12 +520,10 @@ public class EmployeeServiceImpl extends AbstractCrudService<
             }
 
             if (filter.status() != null) {
-                // If filter.status() maps to the same enum/type as entity.transactionStatus, this is fine.
                 predicates.add(cb.equal(root.get("status"), filter.status()));
             }
 
             if (filter.companyId() != null) {
-                // Adjust path if your relationship is truly 'company'
                 predicates.add(cb.equal(root.get("company").get("id"), filter.companyId()));
             }
 
@@ -504,4 +535,5 @@ public class EmployeeServiceImpl extends AbstractCrudService<
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
     }
+    
 }

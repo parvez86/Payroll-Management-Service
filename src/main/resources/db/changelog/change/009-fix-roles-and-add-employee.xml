@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <!--
+        FIX MIGRATION: Correct user roles and add missing TechCorp employee
+        
+        Issues fixed:
+        1. director001 and manager001 incorrectly have role=EMPLOYER (should be EMPLOYEE)
+        2. TechCorp only has 10 employees, needs 11 to match other companies
+        
+        After this migration:
+        - Total employees: 31 (11 TechCorp + 10 InnovateBD + 10 DigitalBD)
+        - All employee users have role=EMPLOYEE
+    -->
+
+    <changeSet id="009-fix-user-roles-and-add-techcorp-employee" author="payroll-seed">
+        <comment>Fix director001 and manager001 roles from EMPLOYER to EMPLOYEE, and add 11th TechCorp employee</comment>
+
+        <!-- Fix director001 role -->
+        <update tableName="users">
+            <column name="role" value="EMPLOYEE"/>
+            <where>username = 'director001'</where>
+        </update>
+
+        <!-- Fix manager001 role -->
+        <update tableName="users">
+            <column name="role" value="EMPLOYEE"/>
+            <where>username = 'manager001'</where>
+        </update>
+
+        <!-- Add 11th TechCorp employee - Grade 3 to balance distribution -->
+        <insert tableName="users">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="username" value="senior003"/>
+            <column name="email" value="senior003@techcorp.com"/>
+            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY.QCJ7R9f7NzGK"/>
+            <column name="role" value="EMPLOYEE"/>
+        </insert>
+
+        <insert tableName="accounts">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="owner_type" value="EMPLOYEE"/>
+            <column name="owner_id" valueComputed="(SELECT id FROM users WHERE username = 'senior003' LIMIT 1)"/>
+            <column name="account_type" value="SAVINGS"/>
+            <column name="account_name" value="Habibur Rahman"/>
+            <column name="account_number" value="SR003"/>
+            <column name="current_balance" value="0.0000"/>
+            <column name="overdraft_limit" value="0.0000"/>
+            <column name="branch_id" valueComputed="(SELECT id FROM branch WHERE branch_name = 'Gulshan Branch' LIMIT 1)"/>
+        </insert>
+
+        <insert tableName="employees">
+            <column name="id" valueComputed="gen_random_uuid()"/>
+            <column name="user_id" valueComputed="(SELECT id FROM users WHERE username = 'senior003' LIMIT 1)"/>
+            <column name="company_id" valueComputed="(SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)"/>
+            <column name="account_id" valueComputed="(SELECT id FROM accounts WHERE account_number = 'SR003' LIMIT 1)"/>
+            <column name="grade_id" valueComputed="(SELECT id FROM grades WHERE rank = 3 LIMIT 1)"/>
+            <column name="code" value="3003"/>
+            <column name="name" value="Habibur Rahman"/>
+            <column name="address" value="Khilkhet, Dhaka"/>
+            <column name="mobile" value="+8801711457890"/>
+        </insert>
+
+        <rollback>
+            <!-- Rollback user role changes -->
+            <update tableName="users">
+                <column name="role" value="EMPLOYER"/>
+                <where>username = 'director001'</where>
+            </update>
+            <update tableName="users">
+                <column name="role" value="EMPLOYER"/>
+                <where>username = 'manager001'</where>
+            </update>
+            
+            <!-- Rollback new employee -->
+            <delete tableName="employees">
+                <where>code = '3003'</where>
+            </delete>
+            <delete tableName="accounts">
+                <where>account_number = 'SR003'</where>
+            </delete>
+            <delete tableName="users">
+                <where>username = 'senior003'</where>
+            </delete>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

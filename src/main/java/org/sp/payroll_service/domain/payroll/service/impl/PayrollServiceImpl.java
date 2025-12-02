@@ -399,7 +399,8 @@ public class PayrollServiceImpl implements PayrollService {
     // --- Helper Methods ---
 
     private void generatePayrollItems(PayrollBatch batch) {
-        List<Employee> employees = employeeRepository.findAllOrderedByGrade();
+        // Get employees ONLY from the batch's company
+        List<Employee> employees = employeeRepository.findAllByCompanyIdOrderByGrade(batch.getCompany().getId());
         SalaryDistributionFormula formula = batch.getCompany().getSalaryFormula();
         BigDecimal batchBaseSalary = batch.getBasicBaseAmount(); // Get base salary from batch input
 
@@ -409,7 +410,8 @@ public class PayrollServiceImpl implements PayrollService {
             payrollItemRepository.save(item);
         }
 
-        log.info("Generated {} payroll items for batch {} with base salary {}", employees.size(), batch.getId(), batchBaseSalary);
+        log.info("Generated {} payroll items for batch {} (company: {}) with base salary {}", 
+            employees.size(), batch.getId(), batch.getCompany().getName(), batchBaseSalary);
     }
 
     private Specification<PayrollBatch> createSpecification(PayrollBatchFilter filter) {

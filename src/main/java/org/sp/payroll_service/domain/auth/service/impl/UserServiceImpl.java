@@ -14,6 +14,7 @@ import org.sp.payroll_service.domain.common.service.AbstractCrudService;
 import org.sp.payroll_service.domain.core.entity.Company;
 import org.sp.payroll_service.domain.wallet.entity.Account;
 import org.sp.payroll_service.repository.CompanyRepository;
+import org.sp.payroll_service.repository.CompanyUserRoleRepository;
 import org.sp.payroll_service.repository.EmployeeRepository;
 import org.sp.payroll_service.repository.UserRepository;
 import org.sp.payroll_service.utils.StringUtils;
@@ -23,7 +24,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Concrete service implementation for managing {@code User} entities.
@@ -46,6 +49,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmployeeRepository employeeRepository;
+    private final CompanyUserRoleRepository companyUserRoleRepository;
     private final CompanyRepository companyRepository;
 
     /**
@@ -57,11 +61,12 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      * @param userRepository  The JPA repository for User entities.
      * @param passwordEncoder The Spring Security password encoder for hashing.
      */
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, EmployeeRepository employeeRepository, CompanyRepository companyRepository) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, EmployeeRepository employeeRepository, CompanyUserRoleRepository companyUserRoleRepository, CompanyRepository companyRepository) {
         super(userRepository, "User");
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.employeeRepository = employeeRepository;
+        this.companyUserRoleRepository = companyUserRoleRepository;
         this.companyRepository = companyRepository;
     }
 
@@ -155,6 +160,8 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
             String fullName = null;
             String description = null;
             UUID companyId = null;
+            String companyName = null;
+            Map<UUID, String> companyMap = null;
             String bizId = null;
             
             // 5. Check if user is an employee to get additional details
@@ -167,6 +174,10 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
                 fullName = employee.getName();
                 bizId = employee.getCode();
                 companyId = employee.getCompany() != null ? employee.getCompany().getId() : null;
+                companyName = employee.getCompany() != null ? employee.getCompany().getName() : null;
+
+                // Employee belongs to single company
+                companyMap = companyId != null ? Map.of(companyId, companyName) : Map.of();
                 description = "Employee - " + (employee.getGrade() != null ? employee.getGrade().getName() : "No Grade");
                 
                 // Get account details if available
@@ -179,16 +190,40 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
                 fullName = user.getUsername();
                 description = "System User - " + user.getRole().name();
                 
-                // For admin/employer, try to get company info
-                var companies = companyRepository.findAll();
-                if (!companies.isEmpty()) {
-                    Company company = companies.getFirst(); // Default company
-                    companyId = company.getId();
-                    accountResponse = mapToAccountResponse(company.getAccount());
+                // ADMIN sees ALL companies, EMPLOYER sees assigned companies only
+                if ("ADMIN".equals(user.getRole().name())) {
+                    // Admin has access to ALL companies in the system
+                    companyMap = companyRepository.findAll()
+                            .stream()
+                            .collect(Collectors.toMap(
+                                    Company::getId,
+                                    Company::getName
+                            ));
+                    log.debug("ADMIN {} has access to ALL {} companies", user.getUsername(), companyMap.size());
+                } else {
+                    // Employer: get companies from CompanyUserRole assignments
+                    companyMap = companyUserRoleRepository
+                            .findCompanyInfosByUserId(user.getId(), java.time.Instant.now());
+
+                    log.debug("EMPLOYER {} has access to {} assigned companies", user.getUsername(), companyMap.size());
+                }
+
+                if (!companyMap.isEmpty()) {
+                    // Set first company as default for backward compatibility
+                    UUID firstCompanyId = companyMap.keySet().iterator().next();
+                    companyId = firstCompanyId;
+                    
+                    // Get account from first company
+                    Company company = companyRepository.findById(firstCompanyId)
+                            .orElse(null);
+                    
+                    if (company != null && company.getAccount() != null) {
+                        accountResponse = mapToAccountResponse(company.getAccount());
+                    }
                 }
             }
             
-            log.debug("Successfully retrieved user details for: {}", user.getUsername());
+            log.debug("Successfully retrieved user details for: {} with {} companies", user.getUsername(), companyMap != null ? companyMap.size() : 0);
             
             return new UserDetailsResponse(
                     userResponse,
@@ -196,6 +231,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
                     fullName,
                     description,
                     companyId,
+                    companyMap,
                     bizId
             );
             

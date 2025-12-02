@@ -9,12 +9,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.api.payroll.dto.*;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.payroll.service.SalaryDistributionFormulaService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -141,8 +143,9 @@ public class SalaryDistributionFormulaController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<PageResponse<SalaryDistributionFormulaResponse>> searchFormulas(
             @Parameter(description = "Filter criteria") @ModelAttribute SalaryDistributionFormulaFilter filter,
-            @PageableDefault(size = 20) Pageable pageable) {
-        log.debug("Request to search formulas with filters: {} and pageable: {}", filter, pageable);
-        return ResponseEntity.ok(formulaService.search(filter, pageable));
+            @PageableDefault(size = 20) Pageable pageable,
+            @AuthenticationPrincipal HeaderResponse headerResponse) {
+        log.debug("Request to search formulas with filters: {}, principal: {} and pageable: {}", filter, headerResponse, pageable);
+        return ResponseEntity.ok(formulaService.search(filter, pageable, headerResponse));
     }
 }

@@ -88,8 +88,9 @@ public class BankController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<PageResponse<BankResponse>> searchBanks(
             @ModelAttribute BankFilter filter,
-            @PageableDefault(size = 20, sort = "name") Pageable pageable) {
+            @PageableDefault(size = 20, sort = "name") Pageable pageable,
+            @AuthenticationPrincipal HeaderResponse headerResponse) {
         log.debug("Request to search banks with filters: {}", filter);
-        return ResponseEntity.ok(bankService.search(filter, pageable));
+        return ResponseEntity.ok(bankService.search(filter, pageable, headerResponse));
     }
 }

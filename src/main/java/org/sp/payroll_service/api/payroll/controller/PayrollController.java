@@ -90,7 +90,7 @@ public class PayrollController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PostMapping("/batches")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<PayrollBatchResponse> createPayrollBatch(
             @Valid @RequestBody CreatePayrollBatchRequest request,
             @AuthenticationPrincipal HeaderResponse principal) {
@@ -185,7 +185,7 @@ public class PayrollController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PostMapping("/batches/{batchId}/process")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<PayrollResult> processPayroll(
             @Parameter(description = "Payroll batch ID") @PathVariable UUID batchId,
             @AuthenticationPrincipal HeaderResponse principal) {
@@ -211,7 +211,7 @@ public class PayrollController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PostMapping("/items/{payrollItemId}/retry")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<PayrollItemResponse> retryPayrollItem(
             @Parameter(description = "Payroll item ID") @PathVariable UUID payrollItemId) {
         log.info("Retrying payroll item: {}", payrollItemId);

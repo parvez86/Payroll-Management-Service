@@ -11,5 +11,9 @@
     <include file="db/changelog/change/003-create-indexes.xml"/>
     <include file="db/changelog/change/004-insert-seed-data.xml"/>
     <include file="db/changelog/change/005-add-basic-salary-payroll-tables.xml"/>
+    <include file="db/changelog/change/006-create-company-user-roles-table.xml"/>
+    <include file="db/changelog/change/007-seed-company-user-roles.xml"/>
+    <include file="db/changelog/change/008-comprehensive-seed-data.xml"/>
+    <include file="db/changelog/change/009-fix-roles-and-add-employee.xml"/>
 
 </databaseChangeLog>

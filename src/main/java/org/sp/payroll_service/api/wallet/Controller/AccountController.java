@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.api.payroll.dto.PageResponse;
 import org.sp.payroll_service.api.wallet.dto.*;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.enums.OwnerType;
 import org.sp.payroll_service.domain.wallet.service.AccountService;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +18,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -137,10 +139,11 @@ public class AccountController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<PageResponse<AccountResponse>> searchAccounts(
             @Parameter(description = "Filter criteria") @ModelAttribute AccountFilter filter,
-            @PageableDefault(size = 20, sort = "accountNumber") Pageable pageable) {
-        log.debug("Request to search accounts with filters: {}", filter);
+            @PageableDefault(size = 20, sort = "accountNumber") Pageable pageable,
+            @AuthenticationPrincipal HeaderResponse headerResponse) {
+        log.debug("Request to search accounts with filters: {}, principal: {}", filter, headerResponse);
 
-        return ResponseEntity.ok(accountService.search(filter, pageable));
+        return ResponseEntity.ok(accountService.search(filter, pageable, headerResponse));
     }
 
     // --- TRANSACTIONAL ENDPOINTS (Placeholder for a separate TransactionService) ---

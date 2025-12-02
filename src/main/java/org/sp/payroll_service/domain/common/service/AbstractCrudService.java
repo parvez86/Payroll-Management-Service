@@ -121,13 +121,14 @@ public abstract class AbstractCrudService<
      * Subclasses can override this method to provide custom pagination hardening and filtering logic.
      * This method returns PageResponse with complete pagination metadata.
      *
-     * @param filter The filter criteria (subclasses should override buildSpecificationFromFilter to handle)
-     * @param pageable The pagination and sorting information
+     * @param filter         The filter criteria (subclasses should override buildSpecificationFromFilter to handle)
+     * @param pageable       The pagination and sorting information
+     * @param headerResponse
      * @return PageResponse containing mapped results and pagination metadata
      */
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<R> search(F filter, Pageable pageable) {
+    public PageResponse<R> search(F filter, Pageable pageable, HeaderResponse headerResponse) {
         Specification<E> spec = buildSpecificationFromFilter(filter);
         Page<E> entityPage = specExecutor.findAll(spec, pageable);
         return PageResponse.from(
@@ -153,6 +154,22 @@ public abstract class AbstractCrudService<
             return spec;
         }
         // No filtering by default
+        return (root, query, cb) -> cb.conjunction();
+    }
+
+    /**
+     * Hook to apply role-based access control.
+     * Default implementation: no filtering (grants full access).
+     * 
+     * Subclasses should override this method to implement domain-specific
+     * authorization logic, or inject and delegate to AuthorizationService
+     * for centralized access control.
+     * 
+     * @param principal The authenticated user's principal
+     * @return A JPA Specification for querying (default: no filter)
+     */
+    protected Specification<E> applyRoleBasedAccess(HeaderResponse principal) {
+        // Default: no filtering - subclasses should override or inject AuthorizationService
         return (root, query, cb) -> cb.conjunction();
     }
 }

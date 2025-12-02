@@ -214,8 +214,8 @@ public class JwtTokenProvider {
      */
     public boolean validateTokenType(String token, String expectedType) {
         String tokenType = getTokenType(token);
-        log.error("🔍 [Validate Token Type] === GET Token Type ===");
-        log.error("🔍 expectedType: {} tokenType: {}", expectedType, tokenType);
+        log.debug("🔍 [Validate Token Type] === GET Token Type ===");
+        log.debug("🔍 expectedType: {} tokenType: {}", expectedType, tokenType);
         return expectedType.equals(tokenType);
     }
 
@@ -223,11 +223,11 @@ public class JwtTokenProvider {
      * Safely retrieves the claims from the JWT, handling all parsing exceptions.
      */
     private Claims getClaims(String token) {
-        log.error("🔍 [JWT-CLAIMS-DEBUG] === GET CLAIMS START ===");
-        log.error("🔍 [JWT-CLAIMS-DEBUG] Secret key algorithm: {}", key != null ? key.getAlgorithm() : "null");
+        log.debug("🔍 [JWT-CLAIMS-DEBUG] === GET CLAIMS START ===");
+        log.debug("🔍 [JWT-CLAIMS-DEBUG] Secret key algorithm: {}", key != null ? key.getAlgorithm() : "null");
 
         if (token == null) {
-            log.error("🔍 [JWT-CLAIMS-DEBUG] ❌ Token is null");
+            log.debug("🔍 [JWT-CLAIMS-DEBUG] ❌ Token is null");
             throw new InvalidTokenException("Token is null");
         }
 
@@ -239,7 +239,7 @@ public class JwtTokenProvider {
         // Collapse/remove any whitespace characters that might have been introduced by transport/logging
         cleaned = cleaned.replaceAll("\\s+", "");
 
-        log.error("🔍 [JWT-CLAIMS-DEBUG] Cleaned token first 50 chars: {}", cleaned != null ? cleaned.substring(0, Math.min(50, cleaned.length())) : "null");
+        log.debug("🔍 [JWT-CLAIMS-DEBUG] Cleaned token first 50 chars: {}", cleaned != null ? cleaned.substring(0, Math.min(50, cleaned.length())) : "null");
 
         try {
             // Use the parser with verifyWith to parse the compact JWS and get Claims
@@ -249,7 +249,7 @@ public class JwtTokenProvider {
                     .parseSignedClaims(cleaned)
                     .getPayload();
 
-            log.error("🔍 [JWT-CLAIMS-DEBUG] ✅ CLAIMS EXTRACTED SUCCESSFULLY");
+            log.debug("🔍 [JWT-CLAIMS-DEBUG] ✅ CLAIMS EXTRACTED SUCCESSFULLY");
             return claims;
         } catch (JwtException | IllegalArgumentException ex) {
             log.error("🔍 [JWT-CLAIMS-DEBUG] ❌ CLAIMS EXTRACTION FAILED: {} - {}", ex.getClass().getSimpleName(), ex.getMessage());

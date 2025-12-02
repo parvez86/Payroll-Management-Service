@@ -38,9 +38,10 @@ public interface BaseCrudService<ID, R, C, U, F> {
     /**
      * Executes a custom, optimal search query based on complex criteria.
      *
-     * @param filter The Filter DTO containing search criteria (e.g., transactionStatus, date range, keywords).
-     * @param pageable The Spring Data Pageable object for pagination and sorting of results.
+     * @param filter         The Filter DTO containing search criteria (e.g., transactionStatus, date range, keywords).
+     * @param pageable       The Spring Data Pageable object for pagination and sorting of results.
+     * @param headerResponse Header infos
      * @return A Page of Response DTOs matching the filter.
      */
-    PageResponse<R> search(F filter, Pageable pageable);
+    PageResponse<R> search(F filter, Pageable pageable, HeaderResponse headerResponse);
 }
