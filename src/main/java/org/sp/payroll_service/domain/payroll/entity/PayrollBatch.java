@@ -47,7 +47,7 @@ public class PayrollBatch extends BaseEntity {
      * Company that this payroll batch belongs to.
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "company_id")
+    @JoinColumn(name = "company_id", referencedColumnName = "id", nullable = false)
     private Company company;
 
     /**

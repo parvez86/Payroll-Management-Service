@@ -65,7 +65,7 @@ public class PayrollServiceImpl implements PayrollService {
     public PayrollBatchResponse createPayrollBatch(CreatePayrollBatchRequest request, HeaderResponse currentUser) {
         log.info("Creating payroll batch: {} for company: {}", request.name(), request.companyId());
 
-        Optional<PayrollBatch> existingPayrollBatch= payrollBatchRepository.findFirstActiveByPayrollStatus(PayrollStatus.PENDING);
+        Optional<PayrollBatch> existingPayrollBatch= payrollBatchRepository.findFirstActiveByPayrollStatus(request.companyId(), PayrollStatus.PENDING);
 
         existingPayrollBatch.ifPresent(batch -> {
             String msg = String.format("Company ID %s already has an active PENDING payroll batch ID %s.",

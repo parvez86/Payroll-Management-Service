@@ -50,14 +50,15 @@ public interface PayrollBatchRepository extends BaseRepository<PayrollBatch, UUI
     /**
      * Finds the first active (not DELETED) PayrollBatch with the given status.
      * Orders by ID to ensure a consistent 'first' result.
+     * @param companyId The ID of the Company the batch belongs to.
      * @param payrollStatus the status to search for
      * @return an Optional containing the first matching entity, or empty if none found.
      */
     @Query(value = "SELECT e FROM PayrollBatch e " +
-            "WHERE e.payrollStatus = :payrollStatus AND e.status <> 'DELETED' " +
-            "ORDER BY e.createdAt ASC " +
-            "FETCH FIRST 1 ROWS ONLY")
+            "WHERE e.company.id = :companyId AND e.payrollStatus = :payrollStatus AND e.status <> 'DELETED' " +
+            "ORDER BY e.createdAt ASC")
     Optional<PayrollBatch> findFirstActiveByPayrollStatus(
+            @Param("companyId") UUID companyId,
             @Param("payrollStatus") PayrollStatus payrollStatus
     );
 
