@@ -1,5 +1,6 @@
 package org.sp.payroll_service.api.auth.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -34,6 +35,7 @@ public class AuthController {
     
     private final AuthenticationService authService;
     private final UserService userService;
+        private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     
     /**
      * Authenticates user and returns JWT token.
@@ -169,11 +171,15 @@ public class AuthController {
             @ApiResponse(responseCode = "404", description = "User not found")
     })
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserDetailsResponse> me(@HeaderPrincipal HeaderResponse currentUser) {
+    public ResponseEntity<UserDetailsResponse> me(
+            @HeaderPrincipal HeaderResponse currentUser
+    ) throws JsonProcessingException {
         log.info("Get current user details API called");
+        log.info("Current user: {}", currentUser);
         try {
             UserDetailsResponse response = userService.me(currentUser.username());
             log.info("User details retrieved successfully");
+            log.info("Response: {}", response);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Failed to get user details: {}", e.getMessage());

@@ -144,6 +144,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
     @Transactional(readOnly = true)
     public UserDetailsResponse me(String username) {
         log.debug("Getting user details from access token");
+        log.info("Username: {}", username);
         
         try {
 
@@ -203,7 +204,14 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
                 } else {
                     // Employer: get companies from CompanyUserRole assignments
                     companyMap = companyUserRoleRepository
-                            .findCompanyInfosByUserId(user.getId(), java.time.Instant.now());
+                            .findCompanyInfosByUserId(user.getId(), java.time.Instant.now())
+                            .stream()
+                            .collect(
+                                    Collectors.toMap(
+                                            obj -> (UUID) obj[0],
+                                            obj -> (String) obj[1]
+                                    )
+                            );
 
                     log.debug("EMPLOYER {} has access to {} assigned companies", user.getUsername(), companyMap.size());
                 }
@@ -211,6 +219,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
                 if (!companyMap.isEmpty()) {
                     // Set first company as default for backward compatibility
                     UUID firstCompanyId = companyMap.keySet().iterator().next();
+                    log.info("first-company: {}", firstCompanyId);
                     companyId = firstCompanyId;
                     
                     // Get account from first company

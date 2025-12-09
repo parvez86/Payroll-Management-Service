@@ -68,7 +68,7 @@ public interface CompanyUserRoleRepository extends BaseRepository<CompanyUserRol
             "AND cur.active = true " +
             "AND (cur.validFrom IS NULL OR cur.validFrom <= :now) " +
             "AND (cur.validTo IS NULL OR cur.validTo >= :now)")
-    Map<UUID, String> findCompanyInfosByUserId(@Param("userId") UUID userId, @Param("now") Instant now);
+    List<Object[]> findCompanyInfosByUserId(@Param("userId") UUID userId, @Param("now") Instant now);
 
 
     /**
