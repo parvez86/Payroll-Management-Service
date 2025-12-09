@@ -15,5 +15,6 @@
     <include file="db/changelog/change/007-seed-company-user-roles.xml"/>
     <include file="db/changelog/change/008-comprehensive-seed-data.xml"/>
     <include file="db/changelog/change/009-fix-roles-and-add-employee.xml"/>
+    <include file="db/changelog/change/011-add-company-to-transactions.xml"/>
 
 </databaseChangeLog>

@@ -28,9 +28,12 @@ public record TransactionFilter(
     
     @Schema(description = "Filter by debit account ID")
     UUID debitAccountId,
-    
+
     @Schema(description = "Filter by credit account ID")
     UUID creditAccountId,
+
+    @Schema(description = "Filter by companyId")
+    UUID companyId,
     
     @Schema(description = "Filter by payroll batch ID")
     UUID payrollBatchId,

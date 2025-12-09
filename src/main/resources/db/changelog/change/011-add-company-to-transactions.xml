@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <changeSet id="011-add-company-to-transactions" author="payroll-service">
+        <comment>Add company_id column to transactions table for role-based authorization</comment>
+
+        <!-- Add company_id column -->
+        <addColumn tableName="transactions">
+            <column name="company_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+
+        <!-- Backfill company_id from payroll batch (transactions related to payroll processing) -->
+        <sql>
+            UPDATE transactions t
+            SET company_id = pb.company_id
+            FROM payroll_batches pb
+            WHERE t.batch_id = pb.id AND t.company_id IS NULL
+        </sql>
+
+        <!-- Backfill company_id from debit account owner (for other transactions) -->
+        <sql>
+            UPDATE transactions t
+            SET company_id = a.owner_id
+            FROM accounts a
+            WHERE t.debit_acc_id = a.id
+            AND t.company_id IS NULL
+            AND a.owner_type = 'COMPANY'
+        </sql>
+
+        <!-- Set NOT NULL after backfill -->
+        <addNotNullConstraint
+            tableName="transactions"
+            columnName="company_id"
+            columnDataType="UUID"
+            validate="true"/>
+
+        <!-- Add foreign key constraint -->
+        <addForeignKeyConstraint
+            baseTableName="transactions"
+            baseColumnNames="company_id"
+            constraintName="fk_transaction_company"
+            referencedTableName="companies"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- Add index for better query performance -->
+        <createIndex
+            indexName="idx_transactions_company_id"
+            tableName="transactions">
+            <column name="company_id"/>
+        </createIndex>
+
+        <!-- Add index for company + status queries -->
+        <createIndex
+            indexName="idx_transactions_company_status"
+            tableName="transactions">
+            <column name="company_id"/>
+            <column name="transaction_status"/>
+        </createIndex>
+
+        <rollback>
+            <dropIndex indexName="idx_transactions_company_status" tableName="transactions"/>
+            <dropIndex indexName="idx_transactions_company_id" tableName="transactions"/>
+            <dropForeignKeyConstraint baseTableName="transactions" constraintName="fk_transaction_company"/>
+            <dropColumn tableName="transactions" columnName="company_id"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -12,16 +12,17 @@ import java.util.UUID;
  * Provides centralized access control for company-level operations.
  * All methods respect temporal validity (active flag + valid_from/valid_to).
  */
-public interface CompanyUserRoleService{
+public interface CompanyUserRoleService {
+    
     /**
      * Get all company IDs a user has access to (any role).
      * Only returns currently valid (active + time-valid) assignments.
-     *
+     * 
      * @param userId the user ID
      * @return list of accessible company IDs (empty if none)
      */
     List<UUID> getUserCompanyIds(UUID userId);
-
+    
     /**
      * Get all company IDs a user has access to with specific roles.
      * Only returns currently valid (active + time-valid) assignments.

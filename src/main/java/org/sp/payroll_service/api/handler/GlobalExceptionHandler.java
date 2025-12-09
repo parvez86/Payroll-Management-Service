@@ -251,26 +251,23 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     // --- Security and Authentication Handlers ---
 
     /**
-     * Handles custom authorization exceptions (e.g., user not authorized to access resource). (HTTP 403).
+     * Handles general {@link org.sp.payroll_service.domain.common.exception.AccessDeniedException} for service layer business validation failures. (HTTP 400).
      */
-    @ExceptionHandler(org.sp.payroll_service.domain.common.exception.AuthorizationException.class)
-    public ResponseEntity<ErrorResponse> handleAuthorizationException(
-            org.sp.payroll_service.domain.common.exception.AuthorizationException ex,
-            WebRequest request) {
-
+    @ExceptionHandler(org.sp.payroll_service.domain.common.exception.AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleCustomAccessDeniedException(
+            org.sp.payroll_service.domain.common.exception.AccessDeniedException ex, WebRequest request) {
         ErrorResponse errorResponse = getErrorResponse(
-                ErrorCodes.AUTH_INSUFFICIENT_PRIVILEGES,
+                ex.getErrorCode(),
                 ex.getMessage(),
-                ErrorCategory.SECURITY,
+                ex.getCategory(),
                 getRequestPath(request),
                 Map.of(),
                 null
         );
 
-        log.warn("Authorization failed: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+        log.warn("Custom authentication exception: {} | Code: {}", ex.getMessage(), ex.getErrorCode());
+        return ResponseEntity.status(ex.getStatus()).body(errorResponse);
     }
-
     /**
      * Handles access denied exceptions when a user is authenticated but lacks permission. (HTTP 403).
      */

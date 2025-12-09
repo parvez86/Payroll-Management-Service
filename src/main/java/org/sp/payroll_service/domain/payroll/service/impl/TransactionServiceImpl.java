@@ -8,11 +8,8 @@ import org.sp.payroll_service.api.payroll.dto.TransferRequest;
 import org.sp.payroll_service.api.payroll.mapper.TransactionMapper;
 import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.dto.response.Money;
-import org.sp.payroll_service.domain.common.enums.CompanyRoleType;
-import org.sp.payroll_service.domain.common.enums.OwnerType;
-import org.sp.payroll_service.domain.common.enums.Role;
-import org.sp.payroll_service.domain.common.enums.TransactionStatus;
-import org.sp.payroll_service.domain.common.exception.AuthorizationException;
+import org.sp.payroll_service.domain.common.enums.*;
+import org.sp.payroll_service.domain.common.exception.AccessDeniedException;
 import org.sp.payroll_service.domain.common.exception.ResourceNotFoundException;
 import org.sp.payroll_service.domain.payroll.entity.PayrollBatch;
 import org.sp.payroll_service.domain.payroll.entity.PayrollItem;
@@ -24,6 +21,8 @@ import org.sp.payroll_service.domain.payroll.service.transaction.TransactionStra
 import org.sp.payroll_service.domain.wallet.entity.Account;
 import org.sp.payroll_service.repository.AccountRepository;
 import org.sp.payroll_service.repository.CompanyUserRoleRepository;
+import org.sp.payroll_service.repository.CompanyRepository;
+import org.sp.payroll_service.repository.EmployeeRepository;
 import org.sp.payroll_service.repository.PayrollBatchRepository;
 import org.sp.payroll_service.repository.PayrollItemRepository;
 import org.sp.payroll_service.repository.TransactionRepository;
@@ -43,6 +42,7 @@ import java.util.stream.Collectors;
 /**
  * Service implementation for financial transaction operations.
  * Provides ACID-compliant double-entry accounting with proper isolation.
+ * Now includes role-based authorization for transaction access.
  * <p>
  * NOTE: All methods are now synchronous (blocking). Asynchronous execution using
  * Virtual Threads should be handled by the calling Controller or service layer.
@@ -54,6 +54,8 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
+    private final CompanyRepository companyRepository;
+    private final EmployeeRepository employeeRepository;
     private final TransactionMapper transactionMapper;
     private final TransactionStrategyService transactionStrategyService;
     private final PayrollBatchRepository payrollBatchRepository;
@@ -104,7 +106,7 @@ public class TransactionServiceImpl implements TransactionService {
 
             // 4. AUTHORIZATION: Verify user can debit from this account (admin or account owner)
             if (!canUserAccessAccount(currentUserId, debitAccount)) {
-                throw new AuthorizationException(
+                throw new AccessDeniedException (
                     "User not authorized to transfer from account: " + debitAccount.getAccountNumber());
             }
 
@@ -119,13 +121,48 @@ public class TransactionServiceImpl implements TransactionService {
             // 6. PAYROLL LINKING: Populate payroll-related fields if provided
             if (request.payrollBatchId() != null) {
                 PayrollBatch batch = payrollBatchRepository.findById(request.payrollBatchId())
-                    .orElseThrow(() -> ResourceNotFoundException.forEntity("PayrollBatch", request.payrollBatchId()));
+                        .orElseThrow(() -> ResourceNotFoundException.forEntity("PayrollBatch", request.payrollBatchId()));
                 transaction.setPayrollBatch(batch);
+                // Set company from batch (for payroll transactions)
+                if (batch.getCompany() != null) {
+                    transaction.setCompany(batch.getCompany());
+                }
             }
+            
             if (request.payrollItemId() != null) {
                 PayrollItem item = payrollItemRepository.findById(request.payrollItemId())
                     .orElseThrow(() -> ResourceNotFoundException.forEntity("PayrollItem", request.payrollItemId()));
                 transaction.setSourceItem(item);
+            }
+
+            // 6.5. COMPANY ASSIGNMENT: Set company if not already set (critical for authorization)
+            if (transaction.getCompany() == null) {
+                // Try to get company from debit account if it's a company account
+                if (debitAccount.getOwnerType() == OwnerType.COMPANY && debitAccount.getOwnerId() != null) {
+                    org.sp.payroll_service.domain.core.entity.Company company = companyRepository.findById(debitAccount.getOwnerId())
+                            .orElse(null);
+                    if (company != null) {
+                        transaction.setCompany(company);
+                        log.debug("Set transaction company from debit account: {}", company.getId());
+                    }
+                }
+
+                // Fallback: Try to get from credit account's employee's company
+                if (transaction.getCompany() == null && creditAccount.getOwnerType() == OwnerType.EMPLOYEE) {
+                    UUID creditAccountId = creditAccount.getId();
+                    var employee = employeeRepository.findByAccount_IdAndStatus(creditAccountId, EntityStatus.ACTIVE).orElse(null);
+                    if (employee != null && employee.getCompany() != null) {
+                        transaction.setCompany(employee.getCompany());
+                        log.debug("Set transaction company from credit account employee: {}", employee.getCompany().getId());
+                    }
+                }
+            }
+
+            // Validate company is set (CRITICAL for authorization filtering)
+            if (transaction.getCompany() == null) {
+                log.error("Transaction company is NULL - authorization will fail. Debit: {}, Credit: {}",
+                        debitAccount.getId(), creditAccount.getId());
+                throw new PayrollProcessingException("Cannot determine transaction company for authorization");
             }
             
             // Override type/category if explicitly specified
@@ -177,31 +214,48 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional(readOnly = true)
     public Page<TransactionResponse> getTransactionHistory(TransactionFilter filter, HeaderResponse principal, Pageable pageable) {
         log.debug("Retrieving transaction history with filter: {}, principal: {}", filter, principal);
+
+        // Create spec based on role and company filter
+        Specification<Transaction> spec = (root, query, cb) -> {
+            var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
+            
+            // Add company filter if not ADMIN
+            if (filter.companyId() != null) {
+                predicates.add(cb.equal(root.get("company").get("id"), filter.companyId()));
+            }
+            
+            // Add other filters from filter object
+            if (filter != null) {
+                if (filter.status() != null) {
+                    predicates.add(cb.equal(root.get("transactionStatus"), filter.status()));
+                }
+                if (filter.type() != null) {
+                    predicates.add(cb.equal(root.get("type"), filter.type()));
+                }
+                if (filter.category() != null) {
+                    predicates.add(cb.equal(root.get("category"), filter.category()));
+                }
+                if (filter.debitAccountId() != null) {
+                    predicates.add(cb.equal(root.get("debitAccount").get("id"), filter.debitAccountId()));
+                }
+                if (filter.creditAccountId() != null) {
+                    predicates.add(cb.equal(root.get("creditAccount").get("id"), filter.creditAccountId()));
+                }
+                if (filter.minAmount() != null) {
+                    predicates.add(cb.ge(root.get("amount"), filter.minAmount()));
+                }
+                if (filter.maxAmount() != null) {
+                    predicates.add(cb.le(root.get("amount"), filter.maxAmount()));
+                }
+            }
+            
+            if (predicates.isEmpty()) {
+                return cb.conjunction();
+            }
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
         
-        // Security: Non-admin users can only see transactions they created
-        TransactionFilter secureFilter = filter;
-        if (principal != null && principal.role() != null && principal.role() != org.sp.payroll_service.domain.common.enums.Role.ADMIN) {
-            // Override createdBy filter for non-admin users
-            secureFilter = new TransactionFilter(
-                filter.type(),
-                filter.category(),
-                filter.status(),
-                filter.debitAccountId(),
-                filter.creditAccountId(),
-                filter.payrollBatchId(),
-                filter.minAmount(),
-                filter.maxAmount(),
-                filter.fromDate(),
-                filter.toDate(),
-                filter.searchText(),
-                principal.userId()  // Force filter by current user
-            );
-            log.debug("Non-admin user {} - filtering transactions by createdBy={}", principal.username(), principal.userId());
-        }
-
-        Specification<Transaction> spec = createSpecification(secureFilter);
         Page<Transaction> transactionPage = transactionRepository.findAll(spec, pageable);
-
         return transactionPage.map(transactionMapper::toResponse);
     }
 
@@ -222,7 +276,7 @@ public class TransactionServiceImpl implements TransactionService {
         log.debug("Retrieving transactions for account: {}", accountId);
 
         // Verify account exists
-        accountRepository.findById(accountId)
+        Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> ResourceNotFoundException.forEntity("Account", accountId));
 
         Page<Transaction> transactionPage = transactionRepository.findByAccountId(accountId, pageable);
@@ -233,6 +287,9 @@ public class TransactionServiceImpl implements TransactionService {
     @Transactional(readOnly = true)
     public List<TransactionResponse> getBatchTransactions(UUID batchId) {
         log.debug("Retrieving transactions for batch: {}", batchId);
+
+        PayrollBatch batch = payrollBatchRepository.findById(batchId)
+                .orElseThrow(() -> ResourceNotFoundException.forEntity("PayrollBatch", batchId));
 
         List<Transaction> transactions = transactionRepository.findByPayrollBatchId(batchId);
         return transactions.stream()

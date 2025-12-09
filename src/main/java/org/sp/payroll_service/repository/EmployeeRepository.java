@@ -2,6 +2,7 @@ package org.sp.payroll_service.repository;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import org.sp.payroll_service.domain.common.enums.EntityStatus;
 import org.sp.payroll_service.domain.common.repository.BaseRepository;
 import org.sp.payroll_service.domain.payroll.entity.Employee;
 import org.springframework.data.jpa.repository.Query;
@@ -119,4 +120,17 @@ public interface EmployeeRepository extends BaseRepository<Employee, UUID> {
            "WHERE e.company.id = :companyId " +
            "ORDER BY g.rank ASC, e.name ASC")
     List<Employee> findAllByCompanyIdOrderByGrade(@Param("companyId") UUID companyId);
+
+    /**
+     * Finds a single Employee by their linked Account's ID and the Employee's status.
+     * <p>
+     * JPA uses property traversal for nested fields:
+     * - 'Account_Id' translates to 'account.id'
+     * - 'Status' translates to 'status'
+     *
+     * @param accountId The UUID of the linked Account.
+     * @param status The status of the Employee (e.g., ACTIVE, INACTIVE).
+     * @return An Optional containing the matching Employee, or empty if not found.
+     */
+    Optional<Employee> findByAccount_IdAndStatus(UUID accountId, EntityStatus status);
 }

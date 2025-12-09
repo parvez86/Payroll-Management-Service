@@ -7,6 +7,7 @@ import org.sp.payroll_service.domain.payroll.entity.Transaction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -16,6 +17,7 @@ import java.util.UUID;
 
 /**
  * Transaction repository with financial query methods.
+ * Supports role-based filtering for company-scoped transactions.
  */
 @Repository
 public interface TransactionRepository extends BaseRepository<Transaction, UUID> {
@@ -83,4 +85,34 @@ public interface TransactionRepository extends BaseRepository<Transaction, UUID>
      * @return true if exists, false otherwise
      */
     boolean existsByReferenceId(String referenceId);
+
+    /**
+     * Find transactions for a specific company with pagination.
+     * Used for company-scoped transaction history.
+     * 
+     * @param companyId company identifier
+     * @param pageable pagination parameters
+     * @return paginated transactions for the company
+     */
+    @Query("SELECT t FROM Transaction t WHERE t.company.id = :companyId ORDER BY t.createdAt DESC")
+    Page<Transaction> findByCompanyIdOrderByCreatedAtDesc(@Param("companyId") UUID companyId, Pageable pageable);
+
+    /**
+     * Find transactions involving employee's account (debit or credit) for a company.
+     * Used for employee transaction history.
+     * 
+     * @param accountId employee's account identifier
+     * @param companyId company identifier
+     * @param pageable pagination parameters
+     * @return paginated transactions
+     */
+    @Query("SELECT t FROM Transaction t " +
+           "WHERE t.company.id = :companyId " +
+           "AND (t.debitAccount.id = :accountId OR t.creditAccount.id = :accountId) " +
+           "ORDER BY t.createdAt DESC")
+    Page<Transaction> findByCompanyIdAndAccountIdOrderByCreatedAtDesc(
+            @Param("companyId") UUID companyId,
+            @Param("accountId") UUID accountId,
+            Pageable pageable
+    );
 }

@@ -7,6 +7,7 @@ import org.sp.payroll_service.domain.common.entity.BaseEntity;
 import org.sp.payroll_service.domain.common.enums.TransactionCategory;
 import org.sp.payroll_service.domain.common.enums.TransactionStatus;
 import org.sp.payroll_service.domain.common.enums.TransactionType;
+import org.sp.payroll_service.domain.core.entity.Company;
 import org.sp.payroll_service.domain.wallet.entity.Account;
 
 import java.math.BigDecimal;
@@ -15,6 +16,7 @@ import java.time.Instant;
 /**
  * Enhanced transaction entity supporting double-entry accounting.
  * Records atomic financial movements with proper debit/credit structure.
+ * Company tracking for authorization and reporting.
  */
 @Entity
 @Table(name = "transactions")
@@ -60,6 +62,15 @@ public class Transaction extends BaseEntity {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_item_id", unique = true)
     private PayrollItem sourceItem;
+
+    /**
+     * Company that owns this transaction.
+     * Used for authorization and filtering.
+     * Typically the company that owns the debit account (funding company).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
 
     // Legacy fields for backward compatibility
     @ManyToOne(fetch = FetchType.LAZY)
