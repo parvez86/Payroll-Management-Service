@@ -5,7 +5,7 @@ spring:
     enabled: true
     executor:
       type: virtual-thread
-  
+
   # Database Configuration
   datasource:
     url: jdbc:postgresql://localhost:5432/payroll_db
@@ -28,7 +28,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        show_sql: false
+        show_sql: true
         jdbc:
           batch_size: 20
         order_inserts: true
@@ -93,8 +93,10 @@ logging:
   level:
     org.sp.payroll_service: INFO
     org.springframework.security: DEBUG
-    org.hibernate.SQL: WARN
-    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.hibernate.SQL: DEBUG
+#    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+#    org.hibernate.type.descriptor.sql.BasicBinder: WARN
     liquibase: INFO
   pattern:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

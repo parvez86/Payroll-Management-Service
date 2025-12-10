@@ -464,7 +464,8 @@ public class EmployeeServiceImpl extends AbstractCrudService<
     @Override
     public Integer generateEmployeeCode() {
         log.debug("Generating employee code");
-        return employeeRepository.findMaxIdNumber()+1;
+        int currMax = employeeRepository.findMaxIdNumber();
+        return currMax+1;
     }
 
     /**

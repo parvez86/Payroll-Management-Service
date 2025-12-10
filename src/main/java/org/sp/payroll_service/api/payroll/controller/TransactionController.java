@@ -105,7 +105,7 @@ public class TransactionController {
             @Parameter(description = "Filter criteria") @ModelAttribute TransactionFilter filter,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             @HeaderPrincipal HeaderResponse principal) {
-        log.info("Retrieving transaction history with filter: {}, principal: {}", filter, principal);
+        log.info("Retrieving transaction history with filter: {}, principal: {}, pageable: {}", filter, principal, pageable);
 
         return ResponseEntity.ok(transactionService.getTransactionHistory(filter, principal, pageable));
     }

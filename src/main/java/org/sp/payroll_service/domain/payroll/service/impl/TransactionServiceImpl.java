@@ -225,30 +225,38 @@ public class TransactionServiceImpl implements TransactionService {
             }
             
             // Add other filters from filter object
-            if (filter != null) {
-                if (filter.status() != null) {
-                    predicates.add(cb.equal(root.get("transactionStatus"), filter.status()));
-                }
-                if (filter.type() != null) {
-                    predicates.add(cb.equal(root.get("type"), filter.type()));
-                }
-                if (filter.category() != null) {
-                    predicates.add(cb.equal(root.get("category"), filter.category()));
-                }
-                if (filter.debitAccountId() != null) {
-                    predicates.add(cb.equal(root.get("debitAccount").get("id"), filter.debitAccountId()));
-                }
-                if (filter.creditAccountId() != null) {
-                    predicates.add(cb.equal(root.get("creditAccount").get("id"), filter.creditAccountId()));
-                }
-                if (filter.minAmount() != null) {
-                    predicates.add(cb.ge(root.get("amount"), filter.minAmount()));
-                }
-                if (filter.maxAmount() != null) {
-                    predicates.add(cb.le(root.get("amount"), filter.maxAmount()));
-                }
+            if (filter.payrollBatchId() != null) {
+                predicates.add(cb.equal(root.get("payrollBatch").get("id"), filter.payrollBatchId()));
             }
-            
+
+            if (filter.status() != null) {
+                predicates.add(cb.equal(root.get("transactionStatus"), filter.status()));
+            }
+
+            if (filter.type() != null) {
+                predicates.add(cb.equal(root.get("type"), filter.type()));
+            }
+
+            if (filter.category() != null) {
+                predicates.add(cb.equal(root.get("category"), filter.category()));
+            }
+
+            if (filter.debitAccountId() != null) {
+                predicates.add(cb.equal(root.get("debitAccount").get("id"), filter.debitAccountId()));
+            }
+
+            if (filter.creditAccountId() != null) {
+                predicates.add(cb.equal(root.get("creditAccount").get("id"), filter.creditAccountId()));
+            }
+
+            if (filter.minAmount() != null) {
+                predicates.add(cb.ge(root.get("amount"), filter.minAmount()));
+            }
+
+            if (filter.maxAmount() != null) {
+                predicates.add(cb.le(root.get("amount"), filter.maxAmount()));
+            }
+
             if (predicates.isEmpty()) {
                 return cb.conjunction();
             }
