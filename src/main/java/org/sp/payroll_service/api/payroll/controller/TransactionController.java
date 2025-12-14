@@ -15,6 +15,8 @@ import org.sp.payroll_service.domain.common.annotation.HeaderPrincipal;
 import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.dto.response.Money;
 import org.sp.payroll_service.domain.payroll.service.TransactionService;
+import org.sp.payroll_service.security.annotation.CurrentUser;
+import org.sp.payroll_service.security.annotation.IsAuthenticated;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -100,11 +102,11 @@ public class TransactionController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER', 'EMPLOYEE')")
+    @IsAuthenticated
     public ResponseEntity<Page<TransactionResponse>> getTransactionHistory(
             @Parameter(description = "Filter criteria") @ModelAttribute TransactionFilter filter,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
-            @HeaderPrincipal HeaderResponse principal) {
+            @CurrentUser HeaderResponse principal) {
         log.info("Retrieving transaction history with filter: {}, principal: {}, pageable: {}", filter, principal, pageable);
 
         return ResponseEntity.ok(transactionService.getTransactionHistory(filter, principal, pageable));

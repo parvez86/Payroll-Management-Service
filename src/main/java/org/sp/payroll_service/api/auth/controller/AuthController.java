@@ -9,10 +9,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.api.auth.dto.*;
+import org.sp.payroll_service.domain.auth.HeaderUtils;
 import org.sp.payroll_service.domain.auth.service.AuthenticationService;
 import org.sp.payroll_service.domain.auth.service.UserService;
 import org.sp.payroll_service.domain.common.annotation.HeaderPrincipal;
+import org.sp.payroll_service.security.annotation.CurrentUser;
 import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
+import org.sp.payroll_service.security.annotation.IsAdminOrEmployer;
+import org.sp.payroll_service.security.annotation.IsAuthenticated;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -50,23 +54,20 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         log.info("========== LOGIN REQUEST START ==========");
         log.info("Login attempt for username: {}", request.username());
-        log.info("Request IP: {}", getClientIpAddress(httpRequest));
-        log.info("Request User-Agent: {}", httpRequest.getHeader("User-Agent"));
-        log.info("Request Content-Type: {}", httpRequest.getContentType());
-        log.debug("Full request details: {}", request);
-        
+        HeaderUtils.extractRequestInfo(request, httpRequest);
+
         try {
             log.info("Calling AuthenticationService.authenticate()...");
             AuthResponse response = authService.authenticate(request);
-            
+
             log.info("Authentication successful for user: {}", request.username());
             log.debug("Generated access token length: {}", response.accessToken() != null ? response.accessToken().length() : 0);
             log.debug("Generated refresh token length: {}", response.refreshToken() != null ? response.refreshToken().length() : 0);
             log.info("Token type: {}, expires in: {} seconds", response.tokenType(), response.expiresIn());
             log.info("========== LOGIN REQUEST SUCCESS ==========");
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             log.error("========== LOGIN REQUEST FAILED ==========");
             log.error("Authentication failed for username: {}", request.username());
@@ -77,7 +78,7 @@ public class AuthController {
             throw e;
         }
     }
-    
+
     /**
      * Refreshes access token using refresh token.
      * @param request refresh token request
@@ -90,10 +91,12 @@ public class AuthController {
         @ApiResponse(responseCode = "401", description = "Invalid or expired refresh token"),
         @ApiResponse(responseCode = "400", description = "Invalid request format")
     })
-    public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<AuthResponse> refreshToken(
+            @Valid @RequestBody RefreshTokenRequest request
+            ) {
         log.info("Token refresh request received");
         log.debug("Refresh token length: {}", request.refreshToken() != null ? request.refreshToken().length() : 0);
-        
+
         try {
             AuthResponse response = authService.refreshToken(request);
             log.info("Token refresh successful");
@@ -116,10 +119,12 @@ public class AuthController {
         @ApiResponse(responseCode = "401", description = "Invalid refresh token"),
         @ApiResponse(responseCode = "400", description = "Invalid request format")
     })
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequest request) {
+    @IsAuthenticated
+    public ResponseEntity<Void> logout(
+            @Valid @RequestBody LogoutRequest request
+            ) {
         log.info("Logout request received");
-        
+
         try {
             authService.logout(request);
             log.info("Logout successful");
@@ -136,7 +141,7 @@ public class AuthController {
      * @return created user information
      */
     @PostMapping("/register")
-    @PreAuthorize("hasRole('ADMIN')")
+    @IsAdminOrEmployer
     @Operation(summary = "Register User", description = "Creates new user account (Admin only)")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "201", description = "User created successfully"),
@@ -168,9 +173,9 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "Invalid or expired token"),
             @ApiResponse(responseCode = "404", description = "User not found")
     })
-    @PreAuthorize("isAuthenticated()")
+    @IsAuthenticated
     public ResponseEntity<UserDetailsResponse> me(
-            @HeaderPrincipal HeaderResponse currentUser
+            @CurrentUser HeaderResponse currentUser
     ) {
         log.info("Get current user details API called");
         log.info("Current user: {}", currentUser);

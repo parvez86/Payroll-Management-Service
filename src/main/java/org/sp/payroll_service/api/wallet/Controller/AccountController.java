@@ -13,6 +13,8 @@ import org.sp.payroll_service.api.wallet.dto.*;
 import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.enums.OwnerType;
 import org.sp.payroll_service.domain.wallet.service.AccountService;
+import org.sp.payroll_service.security.annotation.CurrentUser;
+import org.sp.payroll_service.security.annotation.IsAuthenticated;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -48,7 +50,7 @@ public class AccountController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
     public ResponseEntity<AccountResponse> createAccount(
             @Valid @RequestBody CreateAccountRequest request,
-            @org.springframework.security.core.annotation.AuthenticationPrincipal org.sp.payroll_service.domain.common.dto.response.HeaderResponse principal) {
+            @CurrentUser HeaderResponse principal) {
         log.info("Request to create new account for owner: {} by {} ({})", request.ownerId(), principal.username(), principal.userId());
 
         AccountResponse response = accountService.create(request, principal);
@@ -63,7 +65,7 @@ public class AccountController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+    @IsAuthenticated
     public ResponseEntity<AccountResponse> getAccountById(
             @Parameter(description = "Account ID") @PathVariable UUID id) {
         log.debug("Request to fetch account with ID: {}", id);

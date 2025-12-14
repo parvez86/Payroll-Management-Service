@@ -20,6 +20,8 @@ public class TransactionMapper {
                 .category(transaction.getCategory())
                 .status(transaction.getStatus())
                 .transactionStatus(transaction.getTransactionStatus())
+                .companyId(transaction.getCompany().getId())
+                .companyName(transaction.getCompany().getName())
                 .debitAccountId(transaction.getDebitAccount() != null ? transaction.getDebitAccount().getId() : null)
                 .debitAccountName(transaction.getDebitAccount() != null ? transaction.getDebitAccount().getAccountName() : null)
                 .creditAccountId(transaction.getCreditAccount() != null ? transaction.getCreditAccount().getId() : null)

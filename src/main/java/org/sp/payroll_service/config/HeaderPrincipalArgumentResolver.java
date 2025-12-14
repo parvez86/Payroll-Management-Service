@@ -29,8 +29,10 @@ public class HeaderPrincipalArgumentResolver implements HandlerMethodArgumentRes
      */
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
-        return parameter.hasParameterAnnotation(HeaderPrincipal.class) &&
-               parameter.getParameterType().equals(HeaderResponse.class);
+        // Support any annotation that is or is meta-annotated with @HeaderPrincipal
+        boolean hasHeaderPrincipal = org.springframework.core.annotation.AnnotatedElementUtils.hasAnnotation(
+            parameter.getParameter(), HeaderPrincipal.class);
+        return hasHeaderPrincipal && parameter.getParameterType().equals(HeaderResponse.class);
     }
 
     /**

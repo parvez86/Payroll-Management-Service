@@ -215,6 +215,11 @@ public class TransactionServiceImpl implements TransactionService {
     public Page<TransactionResponse> getTransactionHistory(TransactionFilter filter, HeaderResponse principal, Pageable pageable) {
         log.debug("Retrieving transaction history with filter: {}, principal: {}", filter, principal);
 
+        // todo:
+        //   - if principal.role is admin: filter all the transactions
+        //   - if principal.role is employer: filter all by the employer
+        //   - if principal.role is employee: return his & his downstream user transactions only within the company
+        
         // Create spec based on role and company filter
         Specification<Transaction> spec = (root, query, cb) -> {
             var predicates = new ArrayList<jakarta.persistence.criteria.Predicate>();

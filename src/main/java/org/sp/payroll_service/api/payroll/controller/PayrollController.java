@@ -23,6 +23,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.sp.payroll_service.security.annotation.IsAdmin;
+import org.sp.payroll_service.security.annotation.IsAdminOrEmployer;
+import org.sp.payroll_service.security.annotation.CurrentUser;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -54,7 +57,7 @@ public class PayrollController {
     })
     @Deprecated
     @GetMapping("/companies/{companyId}/pending-batch")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+    @IsAdminOrEmployer
     public ResponseEntity<PayrollBatchResponse> getFirstPendingOrPartialPendingBatch(
             @Parameter(description = "Company ID") @PathVariable("companyId") UUID companyId) {
         PayrollBatchResponse batch = payrollService.findFirstPendingOrPartialPendingBatch(companyId);
@@ -72,7 +75,7 @@ public class PayrollController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/companies/{companyId}/last-batch")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+    @IsAdminOrEmployer
     public ResponseEntity<PayrollBatchResponse> getFirstPendingOrPartialPendingOrLastBatch(
             @Parameter(description = "Company ID") @PathVariable("companyId") UUID companyId) {
         PayrollBatchResponse batch = payrollService.getLastPayrollBatchByIdAndEmployeeId(companyId);
@@ -90,10 +93,10 @@ public class PayrollController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PostMapping("/batches")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+    @IsAdminOrEmployer
     public ResponseEntity<PayrollBatchResponse> createPayrollBatch(
             @Valid @RequestBody CreatePayrollBatchRequest request,
-            @AuthenticationPrincipal HeaderResponse principal) {
+            @CurrentUser HeaderResponse principal) {
         log.info("Creating payroll batch for company: {} by {} ({})", request.companyId(), principal.username(), principal.userId());
         PayrollBatchResponse response = payrollService.createPayrollBatch(request, principal);
         log.info("Payroll batch created for company {} by {}", request.companyId(), principal.userId());
@@ -106,7 +109,7 @@ public class PayrollController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/batches")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+    @IsAdminOrEmployer
     public ResponseEntity<Page<PayrollBatchSummary>> getAllBatches(
             @Parameter(description = "Filter criteria") @ModelAttribute PayrollBatchFilter filter,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -121,7 +124,7 @@ public class PayrollController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/batches/{batchId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+    @IsAdminOrEmployer
     public ResponseEntity<PayrollBatchResponse> getBatchById(
             @Parameter(description = "Payroll batch ID") @PathVariable UUID batchId) {
         log.debug("Retrieving payroll batch: {}", batchId);
@@ -135,7 +138,7 @@ public class PayrollController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/batches/{batchId}/items")
-    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYER')")
+    @IsAdminOrEmployer
     public ResponseEntity<Page<PayrollItemResponse>> getBatchItems(
             @Parameter(description = "Payroll batch ID") @PathVariable UUID batchId,
             @Parameter(description = "EmployeeId ID") @RequestParam(value = "employeeId", required = false) UUID employeeId,
@@ -228,7 +231,7 @@ public class PayrollController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PostMapping("/batches/{batchId}/cancel")
-    @PreAuthorize("hasRole('ADMIN')")
+    @IsAdmin
     public ResponseEntity<PayrollBatchResponse> cancelBatch(
             @Parameter(description = "Payroll batch ID") @PathVariable UUID batchId) {
         log.info("Cancelling payroll batch: {}", batchId);

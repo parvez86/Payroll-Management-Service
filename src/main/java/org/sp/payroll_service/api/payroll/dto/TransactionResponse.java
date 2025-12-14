@@ -39,6 +39,12 @@ public record TransactionResponse(
     
     @Schema(description = "Debit account ID")
     UUID debitAccountId,
+
+    @Schema(description = "Company ID")
+    UUID companyId,
+
+    @Schema(description = "Company Name")
+    String companyName,
     
     @Schema(description = "Debit account name")
     String debitAccountName,
