@@ -15,6 +15,11 @@ echo "- Debug Port: 5005 (for remote debugging)"
 echo "- Database Port: 5432"
 echo "- PgAdmin: http://localhost:5050"
 echo
+echo "Access URLs:"
+echo "   - API: http://localhost:20001/pms/v1/api"
+echo "   - Swagger: http://localhost:20001/pms/v1/api/swagger-ui/index.html"
+echo "   - Health: http://localhost:20001/pms/v1/api/actuator/health"
+echo
 
 echo "To connect remote debugger:"
 echo "1. Open your IDE (IntelliJ/Eclipse/VS Code)"

@@ -1,53 +1,95 @@
-# Payroll Management System - Technical Assignment
+# Payroll Management System
 
-A robust, enterprise-grade payroll management system built with **Spring Boot 3.5.6** and **Java 24**, implementing all assignment requirements with production-ready features including ACID-compliant financial transactions, JWT authentication, and comprehensive CRUD operations.
+A robust, enterprise-grade payroll management system built with **Spring Boot 3.5.6** and **Java 24**, with complete ACID-compliant financial transactions, JWT authentication, and comprehensive CRUD operations.
 
-## 🎯 Assignment Requirements Fulfillment
+## 🚀 Quick Start
 
-### ✅ **Complete Implementation Status**
-- **✅ Employee Management**: 35 users across 3 roles (1 Admin, 3 Employers, 31 Employees)
-- **✅ Multi-Company Support**: 3 companies with proper employee distribution
-- **✅ Role-Based Access Control**: ADMIN, EMPLOYER, EMPLOYEE with hierarchical permissions
-- **✅ 4-Character Employee Codes**: Unique validation with proper constraints
-- **✅ Salary Calculation**: Basic + HRA (20%) + Medical (15%) with configurable Grade 6 base
-- **✅ Bank Account Integration**: Complete account management for employees and companies
-- **✅ Company Main Accounts**: Configurable balance with top-up functionality per company
-- **✅ ACID Money Transfers**: Salary transfers with rollback on insufficient funds
-- **✅ CRUD Operations**: Full Create, Read, Update, Delete for all entities
-- **✅ Input Validation**: Comprehensive data validation with proper error handling
-- **✅ Salary Sheet Display**: Name, rank, and salary reporting with role-based filtering
-- **✅ Balance Reporting**: Total paid salary and remaining company balance per role
-- **✅ JWT Authentication**: Login/logout with role-based access control and authorization
-
-### 📊 **Assignment Completion: 100%** (Backend Complete with Advanced RBAC)
-
-## 🚀 Quick Start (One Command Setup)
-
-### **Windows (Recommended)**
-```powershell
-# Navigate to project and start everything
-cd "d:\SP\job\PayrollManagementSystem\payroll_service"
-.\scripts\start-payroll.bat
-```
-
-### **Linux/Mac**
+**Windows:**
 ```bash
-chmod +x scripts/start-payroll.sh
-./scripts/start-payroll.sh
+scripts\setup.bat              # First time - sets up and starts services
+scripts\start-payroll.bat      # Regular startup - starts only Payroll Service
+scripts\start-jenkins.bat      # Start Jenkins CI/CD (optional)
 ```
 
-### **What This Does**
-1. ✅ Checks Docker availability
-2. 🔧 Builds application with latest code
-3. 🗄️ Initializes PostgreSQL with seed data (10 employees)
-4. 🚀 Starts all services (Backend + Database + PgAdmin)
-5. 📚 Displays access URLs and credentials
+**Linux/Mac:**
+```bash
+chmod +x scripts/*.sh
+./scripts/setup.sh             # First time setup
+./scripts/start-payroll.sh     # Regular startup
+./scripts/start-jenkins.sh     # Jenkins CI/CD
+```
 
----
+After setup, access the application at: **http://localhost:20001/pms/swagger-ui/index.html**
 
-## 🌐 Access Points (After Startup)
+## 📖 Documentation
 
-| Service | URL | Credentials |
+- **Setup Guide:** `docs/SETUP.md` - Get started in 2 minutes
+- **Jenkins Guide:** `docs/JENKINS.md` - Complete Jenkins setup, configuration & deployment
+- **CI/CD Guide:** `docs/CI-CD-SETUP.md` - Docker, Jenkins, GitHub Actions configuration
+- **API Documentation:** `docs/API_REVIEW_ANALYSIS.md` - All endpoints and requirements
+
+## ✅ Features
+
+- ✅ Employee Management (35 users across 3 roles)
+- ✅ Multi-Company Support (3 companies)
+- ✅ Role-Based Access Control (ADMIN, EMPLOYER, EMPLOYEE)
+- ✅ Salary Calculation with HRA & Medical allowances
+- ✅ Bank Account Integration
+- ✅ ACID Money Transfers with rollback
+- ✅ JWT Authentication
+- ✅ Full CRUD Operations
+- ✅ Input Validation & Error Handling
+- ✅ Comprehensive Salary & Balance Reporting
+
+## 🏗️ Technology Stack
+
+- **Backend:** Spring Boot 3.5.6
+- **Language:** Java 24
+- **Database:** PostgreSQL 17
+- **Build:** Gradle 8.14.3
+- **Containerization:** Docker & Docker Compose
+- **CI/CD:** GitHub Actions & Jenkins
+
+## 📁 Project Structure
+
+```
+├── scripts/              # Startup scripts (Windows/Linux/Mac)
+├── docs/                # Complete documentation
+├── src/                 # Java source code
+├── docker-compose.yml   # Local development setup
+├── Dockerfile          # Container image definition
+└── .env.example        # Configuration template
+```
+
+## 🔐 Default Credentials
+
+**Database:**
+- Host: localhost:5432
+- User: payroll_user
+- Password: payroll_pass
+
+**PgAdmin (Database UI):**
+- URL: http://localhost:5050
+- Email: admin@payroll.com
+- Password: admin123
+
+## 🛠️ Common Commands
+
+```bash
+# Start services
+docker-compose up -d
+
+# View logs
+docker logs -f payroll-backend
+
+# Stop services
+docker-compose down
+
+# Rebuild
+docker-compose up -d --build
+```
+
+## 📚 Additional Resources
 |---------|-----|-------------|
 | **🔗 REST API** | http://localhost:20001/pms/api/v1 | See below |
 | **📚 Swagger UI** | http://localhost:20001/pms/api/v1/swagger-ui/index.html | - |

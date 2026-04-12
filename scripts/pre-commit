@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Git Pre-commit Hook for Payroll Management System
+# Place this in: .git/hooks/pre-commit (make executable: chmod +x .git/hooks/pre-commit)
+# 
+# This hook runs basic checks before allowing a commit:
+# - Gradle build check
+# - Code formatting validation
+# - Security checks (basic)
+# - Commit message linting
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo -e "${YELLOW}🔍 Running pre-commit checks...${NC}"
+
+# Check if gradle.build exists
+if [ ! -f "build.gradle" ]; then
+    echo -e "${RED}❌ build.gradle not found${NC}"
+    exit 1
+fi
+
+# 1. Check for secrets in staged files
+echo -e "${YELLOW}🔐 Checking for secrets...${NC}"
+if git diff --cached | grep -i -E 'password|api.?key|secret|token' | grep -v '.properties' > /dev/null; then
+    echo -e "${YELLOW}⚠️  Warning: Possible secrets detected in staged files${NC}"
+    # Don't fail, just warn
+fi
+
+# 2. Gradle build check (optional - slow, can be skipped with --no-verify)
+if [ "${SKIP_BUILD_CHECK}" != "true" ]; then
+    echo -e "${YELLOW}🏗️  Checking Gradle build...${NC}"
+    if ! ./gradlew build -x test --no-daemon > /dev/null 2>&1; then
+        echo -e "${RED}❌ Build check failed${NC}"
+        echo -e "${YELLOW}💡 Tip: Use 'git commit --no-verify' to skip checks${NC}"
+        exit 1
+    fi
+fi
+
+# 3. Check Java formatting (if Spotless configured)
+echo -e "${YELLOW}📋 Checking code format...${NC}"
+if ./gradlew spotlessCheck --no-daemon > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ Code format OK${NC}"
+else
+    echo -e "${YELLOW}⚠️  Code formatting issues detected${NC}"
+    echo "  Fixing with: ./gradlew spotlessApply"
+    ./gradlew spotlessApply --no-daemon > /dev/null 2>&1
+    git add -A
+fi
+
+# 4. Validate commit message format
+COMMIT_MSG=$(git diff --cached --name-only | head -1)
+if [ -n "$COMMIT_MSG" ]; then
+    # Check for conventional commit format (optional)
+    # Pattern: type(scope): message
+    if ! echo "$COMMIT_MSG" | grep -E '^(feat|fix|docs|style|refactor|perf|test|chore|ci)((\(.+\))?!)?:.{1,}' > /dev/null; then
+        echo -e "${YELLOW}💡 Suggested commit format: type(scope): message${NC}"
+        echo "   Examples: feat(auth): add JWT validation, fix(payroll): resolve salary calculation"
+    fi
+fi
+
+echo -e "${GREEN}✅ Pre-commit checks passed!${NC}"
+exit 0

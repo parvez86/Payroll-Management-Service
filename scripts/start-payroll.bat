@@ -1,8 +1,25 @@
 @echo off
+chcp 65001 >nul
 REM Payroll Management System - Startup Script for Windows
 
-echo 🚀 Starting Payroll Management System...
-echo 🚀 ===========================================
+echo.
+echo ============================================
+echo Starting Payroll Management System...
+echo ============================================
+echo.
+
+REM Check if .env exists, create from example if not
+if not exist .env (
+    echo 📝 .env not found, creating from .env.example...
+    if exist .env.example (
+        copy .env.example .env >nul
+        echo ✅ .env created
+    ) else (
+        echo ❌ .env.example not found
+        pause
+        exit /b 1
+    )
+)
 
 REM Check if Docker is running
 docker info >nul 2>&1
@@ -11,6 +28,7 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
 )
+echo ✅ Docker is running
 
 REM Start the application
 echo 🔧 Building and starting containers...
