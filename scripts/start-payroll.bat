@@ -57,11 +57,11 @@ if %errorlevel% equ 0 (
     echo.
     echo 📋 Following startup logs ^(Ctrl+C to stop^):
     echo ---
-    docker-compose logs -f payroll-service
+    docker-compose logs -f payroll-backend
 ) else (
     echo ❌ Failed to start payroll service
     echo 📋 Checking logs...
-    docker-compose logs payroll-service
+    docker-compose logs payroll-backend
     pause
     exit /b 1
 )

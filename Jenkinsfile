@@ -1,8 +1,6 @@
 // Jenkinsfile - Payroll Management System
 // Pipeline definition for Jenkins CI/CD
-// This mirrors GitHub Actions workflows but in Jenkins format
-
-@Library('payroll-shared-library') _
+// Supports: master (prod) → develop (staging) → feature/* (dev)
 
 pipeline {
     agent any
@@ -162,7 +160,7 @@ pipeline {
         
         stage('Docker Build') {
             when {
-                branch 'main'
+                branch 'master'
             }
             steps {
                 echo '🐳 Building Docker image...'
@@ -191,7 +189,7 @@ pipeline {
         
         stage('Docker Security Scan') {
             when {
-                branch 'main'
+                branch 'master'
             }
             steps {
                 echo '🔍 Scanning Docker image for vulnerabilities...'
@@ -211,18 +209,77 @@ pipeline {
             }
         }
         
-        stage('Deploy to Dev') {
+        stage('Deploy to Staging') {
             when {
                 branch 'develop'
             }
+            input {
+                message "Deploy to STAGING (develop)?"
+                ok "Deploy"
+            }
             steps {
-                echo '🚀 Deploying to Dev environment...'
+                echo '🚀 Deploying to Staging environment...'
                 sh '''
-                    echo "✅ Dev deployment would happen here"
-                    echo "   Docker image: ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                    echo "   Environment: dev"
-                    echo "   Note: Actual deployment skipped in learning phase"
+                    echo "📋 Bringing down old container..."
+                    docker-compose down || true
+                    sleep 3
+                    
+                    echo "🔨 Building and starting containers..."
+                    docker-compose up -d --build
+                    
+                    echo "⏳ Waiting for services to start..."
+                    sleep 10
+                    
+                    echo "✅ Staging deployment complete"
+                    docker-compose ps
                 '''
+            }
+            post {
+                success {
+                    echo '✅ Staging deployment successful'
+                    sh '''echo "🌐 Swagger UI: http://localhost:20001/pms/v1/api/swagger-ui/index.html"'''
+                }
+                failure {
+                    echo '❌ Staging deployment failed'
+                    sh '''docker-compose logs payroll-service | tail -50'''
+                }
+            }
+        }
+        
+        stage('Deploy to Production') {
+            when {
+                branch 'master'
+            }
+            input {
+                message "⚠️  Deploy to PRODUCTION (master)?"
+                ok "Deploy to Production"
+            }
+            steps {
+                echo '🚀 Deploying to Production environment...'
+                sh '''
+                    echo "📋 Bringing down old container..."
+                    docker-compose down || true
+                    sleep 3
+                    
+                    echo "🔨 Building and starting containers..."
+                    docker-compose up -d --build
+                    
+                    echo "⏳ Waiting for services to start..."
+                    sleep 15
+                    
+                    echo "✅ Production deployment complete"
+                    docker-compose ps
+                '''
+            }
+            post {
+                success {
+                    echo '✅ Production deployment successful - LIVE!'
+                    sh '''echo "🌐 API: http://localhost:20001/pms/v1/api"'''
+                }
+                failure {
+                    echo '❌ CRITICAL: Production deployment failed - ROLLBACK NEEDED'
+                    sh '''docker-compose logs payroll-service | tail -100'''
+                }
             }
         }
         
