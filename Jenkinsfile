@@ -62,6 +62,7 @@ pipeline {
             steps {
                 echo '🔍 Displaying environment information...'
                 sh '''
+                    chmod +x gradlew
                     echo "📊 Build Information:"
                     echo "  Build Number: ${BUILD_NUMBER}"
                     echo "  Build URL: ${BUILD_URL}"
