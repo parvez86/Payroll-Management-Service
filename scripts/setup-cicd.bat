@@ -107,6 +107,10 @@ echo 5. 📚 Review CI/CD documentation:
 echo    docs\CI-CD-PLAN.md
 echo    .github\GITHUB_ACTIONS_SETUP.md
 echo.
+echo 6. 🔗 (Optional) Jenkins 5-Feature Setup:
+echo    If using Jenkins, see: docs\START-HERE-5-FEATURES.md
+echo    Features: Webhooks, Email, Blue Ocean UI, GitHub Checks, Branch Protection
+echo.
 echo %BLUE%════════════════════════════════════════════════════════%RESET%
 echo.
 pause

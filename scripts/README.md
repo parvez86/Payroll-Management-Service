@@ -21,6 +21,23 @@ scripts\start-jenkins.bat      # Windows - Start Jenkins on port 8080
 ./scripts/start-jenkins.sh    # Linux/Mac
 ```
 
+### 🔑 Jenkins Setup with 5 New Features
+
+After starting Jenkins, complete this setup for production-grade CI/CD:
+
+```bash
+# 📖 See complete setup guide
+docs/START-HERE-5-FEATURES.md         # 5-minute quick guide
+docs/SETUP-5-FEATURES-CHECKLIST.md    # Step-by-step implementation (45-60 min)
+```
+
+**5 Features Implemented:**
+1. ✅ **GitHub Webhook Triggers** - Instant builds (10 sec vs 60 min)
+2. ✅ **Email Notifications** - Auto alerts on success/failure
+3. ✅ **Blue Ocean UI** - Modern visual pipeline interface
+4. ✅ **GitHub Status Checks** - 3 checks on PR (Build, Tests, Security)
+5. ✅ **Branch Protection** - Enforced quality gates on master/develop
+
 ## What These Scripts Do
 
 - ✅ Create `.env` from `.env.example` (if needed)
@@ -31,7 +48,9 @@ scripts\start-jenkins.bat      # Windows - Start Jenkins on port 8080
 
 ## 📖 Full Documentation
 
-See `docs/CI-CD-SETUP.md` for complete configuration and troubleshooting.
+- **CI/CD Setup:** See `docs/CI-CD-SETUP.md`
+- **Jenkins 5-Features:** See `docs/INDEX-5-FEATURES.md` (complete index)
+- **Quick Start:** See `docs/START-HERE-5-FEATURES.md`
 
 ## 📋 Application URLs
 
