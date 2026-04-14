@@ -1,33 +1,45 @@
-# Payroll Management System - Startup Scripts
+# Quick Start Scripts
 
-This directory contains automated scripts to start the complete Payroll Management System with zero configuration required.
+## 🚀 First Time Setup
 
-## 🚀 One-Command Startup
-
-### Windows Users:
 ```bash
-scripts\start-payroll.bat
+scripts\setup.bat              # Windows - Initial setup (creates .env, starts Payroll Service)
+./scripts/setup.sh            # Linux/Mac
 ```
 
-### Linux/Mac Users:
+## 🚀 Payroll Service (Main Application)
+
 ```bash
-chmod +x scripts/start-payroll.sh
-./scripts/start-payroll.sh
+scripts\start-payroll.bat      # Windows - Start the application
+./scripts/start-payroll.sh    # Linux/Mac
 ```
 
-## 🔧 What the Scripts Do
+## 🚀 Jenkins CI/CD (Optional)
 
-1. **🐳 Docker Health Check**: Verify Docker Desktop is running
-2. **🔧 Build & Start**: Execute `docker-compose up --build -d`
-3. **⏳ Service Initialization**: Wait for PostgreSQL and application startup  
-4. **📋 Health Validation**: Check if payroll service is running properly
-5. **🌐 URL Display**: Show all important application access points
-6. **📊 Log Following**: Display real-time startup logs for debugging
+```bash
+scripts\start-jenkins.bat      # Windows - Start Jenkins on port 8080
+./scripts/start-jenkins.sh    # Linux/Mac
+```
 
-## ✅ Complete System Includes
+## What These Scripts Do
 
-- **🚀 Spring Boot Application** (Java 24 + Spring Boot 3.5.6)
-- **🗄️ PostgreSQL Database** with seed data (10 employees across 6 grades)
+- ✅ Create `.env` from `.env.example` (if needed)
+- ✅ Verify Docker is running
+- ✅ Start Docker Compose services
+- ✅ Display service URLs
+- ✅ Show logs for debugging
+
+## 📖 Full Documentation
+
+See `docs/CI-CD-SETUP.md` for complete configuration and troubleshooting.
+
+## 📋 Application URLs
+
+- **API:** http://localhost:20001/pms/v1/api
+- **Swagger:** http://localhost:20001/pms/v1/api/swagger-ui/index.html
+- **Health:** http://localhost:20001/pms/v1/api/actuator/health
+- **PgAdmin:** http://localhost:5050 (admin@payroll.com / admin123)
+
 - **🗄️ PgAdmin Database UI** for database management
 - **📚 Swagger API Documentation** with JWT security integration
 - **🔒 Pre-configured Security** with default admin and employee accounts
