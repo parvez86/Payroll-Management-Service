@@ -1,18 +1,19 @@
 # Payroll Management System - Docker Compose
-#version: '3.8'
+# Configuration uses .env file for environment variables
+# Uses .env file created from .env.example
 
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: payroll-postgres
     environment:
-      POSTGRES_DB: payroll_db
-      POSTGRES_USER: payroll_user
-      POSTGRES_PASSWORD: payroll_pass
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: ${POSTGRES_INITDB_ARGS}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -50,18 +51,18 @@ services:
       dockerfile: Dockerfile
     container_name: payroll-backend
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payroll_db
-      SPRING_DATASOURCE_USERNAME: payroll_user
-      SPRING_DATASOURCE_PASSWORD: payroll_pass
-      JWT_SECRET: DockerSecretKeyForPayrollSystemProduction2024
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
       # SPRING_REDIS_HOST: redis
       # SPRING_REDIS_PORT: 6379
       # Logging configuration for Docker
-      LOGGING_LEVEL_ORG_SP_PAYROLL_SERVICE: INFO
-      LOGGING_PATTERN_CONSOLE: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+      LOGGING_LEVEL_ORG_SP_PAYROLL_SERVICE: ${LOGGING_LEVEL_ORG_SP_PAYROLL_SERVICE}
+      LOGGING_PATTERN_CONSOLE: ${LOGGING_PATTERN_CONSOLE}
     ports:
-      - "20001:20001"
+      - "${PAYROLL_SERVICE_PORT}:20001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -86,11 +87,11 @@ services:
     image: dpage/pgadmin4:latest
     container_name: payroll-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@payroll.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
-      - "5050:80"
+      - "${PGADMIN_PORT}:80"
     depends_on:
       - postgres
     networks:

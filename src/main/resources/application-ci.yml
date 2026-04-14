@@ -1,0 +1,64 @@
+spring:
+  # CI/CD Environment Configuration
+  # Used by both Jenkins and GitHub Actions
+  
+  # Application Metadata
+  application:
+    name: Payroll Management Service
+
+  # Database Configuration (Via environment variables)
+  datasource:
+    # Injected from environment: jdbc:postgresql://postgres:5432/payroll_db
+    # SPRING_DATASOURCE_URL: (set in CI environment)
+    # SPRING_DATASOURCE_USERNAME: (set in CI environment)
+    # SPRING_DATASOURCE_PASSWORD: (set in CI environment)
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: PayrollCIHikariPool
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 60000
+      idle-timeout: 300000
+      max-lifetime: 900000
+  
+  # JPA Configuration - CI optimized
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        show_sql: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
+    open-in-view: false
+
+  # Liquibase Configuration
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    default-schema: public
+    drop-first: false
+
+# Logging Configuration for CI
+logging:
+  level:
+    root: WARN
+    org.sp.payroll_service: INFO
+    org.springframework: INFO
+    org.springframework.security: WARN
+    org.hibernate: WARN
+    liquibase: INFO
+
+# Management Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized

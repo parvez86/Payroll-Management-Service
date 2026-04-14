@@ -1,0 +1,73 @@
+services:
+  # Jenkins Master
+  jenkins:
+    image: jenkins/jenkins:lts-jdk21
+    container_name: payroll-jenkins
+    restart: unless-stopped
+    ports:
+      - "${JENKINS_PORT}:8080"          # Web UI
+      - "${JENKINS_AGENT_PORT}:50000"   # Agent connections
+    environment:
+      - JENKINS_OPTS=${JENKINS_OPTS}
+      - JENKINS_JAVA_OPTS=${JENKINS_JAVA_OPTS}
+    volumes:
+      # Jenkins home directory (persisted)
+      - jenkins_home:/var/jenkins_home
+      # Docker socket (for Docker in Docker)
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Gradle cache (speed up builds)
+      - gradle_cache:/root/.gradle
+    networks:
+      - payroll-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/jenkins/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # PostgreSQL for testing
+  postgres:
+    image: postgres:17-alpine
+    container_name: payroll-jenkins-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - payroll-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PgAdmin for database management (optional, for convenience)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: payroll-jenkins-pgadmin
+    restart: unless-stopped
+    ports:
+      - "${PGADMIN_PORT}:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    networks:
+      - payroll-network
+    depends_on:
+      - postgres
+
+volumes:
+  jenkins_home:
+    driver: local
+  postgres_data:
+    driver: local
+  gradle_cache:
+    driver: local
+
+networks:
+  payroll-network:
+    driver: bridge

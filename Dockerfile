@@ -1,58 +1,68 @@
-# Build stage
+# =========================
+# Stage 1: Build (optimized caching)
+# =========================
 FROM gradle:8.14.3-jdk24-alpine AS build
 
 WORKDIR /app
 
-# Copy Gradle files
-COPY build.gradle settings.gradle ./
+# Copy only dependency descriptors first (cache layer)
+COPY build.gradle settings.gradle gradle.properties ./
 COPY gradle/ gradle/
 
-# Copy source code
+# Pre-download dependencies (cache optimization)
+RUN gradle dependencies --no-daemon
+
+# Copy source
 COPY src/ src/
 
-# Build the application
+# Build (skip tests for faster CI, run separately)
 RUN gradle clean build -x test --no-daemon
 
 
-# Runtime stage
-FROM debian:bullseye-slim
+# =========================
+# Stage 2: Runtime (minimal + secure)
+# =========================
+FROM eclipse-temurin:24-jre-noble
 
-LABEL maintainer="payroll-team@techcorp.com"
-LABEL version="1.0.0"
-LABEL description="Payroll Management System Backend"
+LABEL org.opencontainers.image.title="payroll-service"
+LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.description="Payroll Management System Backend"
+LABEL org.opencontainers.image.authors="payroll-team@techcorp.com"
 
-# Copy local JDK 24 from build context (must be present in project root as 'jdk-24')
-COPY jdk-24 /usr/local/openjdk-24
-ENV JAVA_HOME=/usr/local/openjdk-24
-ENV PATH="$JAVA_HOME/bin:$PATH"
-
-# Create app user for security
+# Create non-root user (security best practice)
 RUN groupadd -r payroll && useradd -r -g payroll payroll
 
-# Set working directory
 WORKDIR /app
 
-# Install curl for health checks
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Install only required package (curl for healthcheck)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the JAR file from build stage
+# Copy built JAR
 COPY --from=build /app/build/libs/*.jar app.jar
 
-# Change ownership to app user
+# Ownership
 RUN chown payroll:payroll app.jar
 
-# Switch to non-root user
 USER payroll
 
-# Expose port
+# Expose app port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8080/api/actuator/health || exit 1
+# Healthcheck (Spring Boot Actuator required)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
 
-# JVM Options for production
-ENV JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC -XX:+UseContainerSupport -Djava.security.egd=file:/dev/./urandom"
+# JVM tuning (container-aware)
+ENV JAVA_OPTS="\
+-XX:+UseContainerSupport \
+-XX:MaxRAMPercentage=75.0 \
+-XX:+UseG1GC \
+-XX:+ExitOnOutOfMemoryError \
+-Djava.security.egd=file:/dev/./urandom"
 
-# Run the application
+# Graceful shutdown support
+STOPSIGNAL SIGTERM
+
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
