@@ -1,0 +1,499 @@
+name: CI/CD - Enterprise Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop, 'feature/**' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master, develop ]
+  schedule:
+    # Run nightly builds at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: false
+        default: 'staging'
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: payroll-management-service
+  JAVA_VERSION: '21'
+
+jobs:
+  # ============================================================================
+  # JOB 1: BUILD & TEST (runs on all branches)
+  # ============================================================================
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: payroll_db
+          POSTGRES_USER: payroll_user
+          POSTGRES_PASSWORD: payroll_pass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      # Step 1: Checkout code
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for SonarQube
+
+      # Step 2: Setup Java
+      - name: 🔧 Setup Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: gradle
+
+      # Step 3: Fix gradlew permissions
+      - name: 🔐 Make gradlew executable
+        run: chmod +x gradlew
+
+      # Step 4: Display versions
+      - name: 📋 Display Tool Versions
+        run: |
+          java -version
+          ./gradlew --version
+
+      # Step 5: Build (without tests)
+      - name: 🏗️ Build Application
+        run: ./gradlew clean build -x test --no-daemon
+        env:
+          SPRING_PROFILES_ACTIVE: ci
+
+      # Step 6: Run unit tests
+      - name: 🧪 Run Unit Tests
+        run: ./gradlew test --no-daemon
+        env:
+          SPRING_PROFILES_ACTIVE: ci
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/payroll_db
+          SPRING_DATASOURCE_USERNAME: payroll_user
+          SPRING_DATASOURCE_PASSWORD: payroll_pass
+        continue-on-error: false
+
+      # Step 7: Generate test reports
+      - name: 📊 Generate Test Report
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: JUnit Results
+          path: '**/build/test-results/test/*.xml'
+          reporter: 'java-junit'
+          fail-on-error: false
+
+      # Step 8: Upload build artifacts
+      - name: 📦 Upload Build Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: build/libs/
+          retention-days: 30
+
+      # Step 9: Upload test reports
+      - name: 📋 Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: build/reports/
+          retention-days: 30
+
+      # Step 10: Comment on PR with status
+      - name: 💬 Comment PR with Build Status
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const outcome = '${{ job.status }}';
+            const emoji = outcome === 'success' ? '✅' : '❌';
+            const comment = `${emoji} Build ${outcome.toUpperCase()}\n\n` +
+              `**Branch:** \`${{ github.head_ref }}\`\n` +
+              `**Commit:** \`${{ github.sha }}\`\n` +
+              `**Run:** [View Details](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # ============================================================================
+  # JOB 2: SECURITY SCANNING (on develop and main only)
+  # ============================================================================
+  security:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+    timeout-minutes: 20
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔐 Run Trivy Filesystem Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: 📤 Upload Trivy Results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'Trivy-Security'
+
+      - name: 🔍 Run Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'Payroll-Management-Service'
+          path: '.'
+          format: 'SARIF'
+          args: >
+            --enableExperimental
+            --enableRetired
+
+      - name: 📤 Upload Dependency Check Results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'dependency-check-report.sarif'
+          category: 'Dependency-Check'
+
+  # ============================================================================
+  # JOB 3: CODE QUALITY (on develop and main only)
+  # ============================================================================
+  quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: payroll_db
+          POSTGRES_USER: payroll_user
+          POSTGRES_PASSWORD: payroll_pass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔧 Setup Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: 🔐 Make gradlew executable
+        run: chmod +x gradlew
+
+      # Generate code coverage
+      - name: 📈 Generate Code Coverage
+        run: ./gradlew test jacocoTestReport --no-daemon
+        env:
+          SPRING_PROFILES_ACTIVE: ci
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/payroll_db
+          SPRING_DATASOURCE_USERNAME: payroll_user
+          SPRING_DATASOURCE_PASSWORD: payroll_pass
+
+      # Upload to Codecov
+      - name: 📊 Upload Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./build/reports/jacoco/test/jacocoTestReport.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      # SonarCloud Analysis
+      - name: 🔬 SonarCloud Analysis
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=payroll-management-service
+            -Dsonar.organization=${{ github.repository_owner }}
+
+  # ============================================================================
+  # JOB 4: DOCKER BUILD (on develop and main only)
+  # ============================================================================
+  docker:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop')
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 📋 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 🏗️ Extract Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🐳 Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+
+  # ============================================================================
+  # JOB 5: DEPLOY TO STAGING (develop branch only)
+  # ============================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build, security, quality, docker]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staging.payroll.example.com
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      # Option 1: Deploy via SSH (for VPS/self-hosted)
+      - name: 🚀 Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          port: ${{ secrets.STAGING_PORT }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /home/payroll
+            echo "🔄 Pulling latest images..."
+            docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:develop
+            
+            echo "⏹️  Stopping old containers..."
+            docker-compose down
+            
+            echo "🚀 Starting new containers..."
+            docker-compose up -d
+            
+            echo "⏳ Waiting for health check..."
+            sleep 10
+            
+            echo "✅ Deployment complete"
+            docker logs payroll-service | tail -20
+
+      # Option 2: Smoke Tests (optional)
+      - name: 🧪 Smoke Tests
+        run: |
+          echo "Testing application health..."
+          curl -f https://staging.payroll.example.com/health || exit 1
+
+  # ============================================================================
+  # JOB 6: DEPLOY TO PRODUCTION (main/master branch + approval)
+  # ============================================================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, security, quality, docker]
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://payroll.example.com
+      # Requires manual approval in GitHub UI
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⏸️  Awaiting Approval (Manual)
+        run: |
+          echo "🚀 Production deployment ready"
+          echo "⏸️  Awaiting manual approval in GitHub Actions tab"
+          echo "💡 Approver: Review changes in pull request"
+
+      # Deploy via SSH when approved
+      - name: 🚀 Deploy to Production via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          port: ${{ secrets.PRODUCTION_PORT }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /home/payroll
+            echo "🔄 Pulling latest images..."
+            docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            
+            echo "💾 Backing up current state..."
+            docker-compose config > backup-$(date +%s).yml
+            
+            echo "⏹️  Stopping old containers..."
+            docker-compose down
+            
+            echo "🚀 Starting new containers..."
+            docker-compose up -d
+            
+            echo "⏳ Waiting for health check..."
+            sleep 10
+            
+            echo "✅ Production deployment complete"
+            docker logs payroll-service | tail -20
+
+  # ============================================================================
+  # JOB 7: NOTIFICATIONS (always send on success/failure)
+  # ============================================================================
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: always()
+    timeout-minutes: 5
+
+    steps:
+      # Slack notification on failure
+      - name: 💬 Slack Notification (Failure)
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "❌ Build Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*❌ Build FAILED*\nRepository: ${{ github.repository }}\nBranch: ${{ github.ref_name }}\nAuthor: ${{ github.actor }}\nCommit: ${{ github.sha }}\nLogs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+
+      # Slack notification on success
+      - name: 💬 Slack Notification (Success)
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          payload: |
+            {
+              "text": "✅ Build Passed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*✅ Build PASSED*\nRepository: ${{ github.repository }}\nBranch: ${{ github.ref_name }}\nAuthor: ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+
+      # Email notification on failure
+      - name: 📧 Email Notification (Failure)
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "❌ Build Failed: ${{ github.repository }}"
+          body: |
+            Build failed for branch: ${{ github.ref_name }}
+            
+            Repository: ${{ github.server_url }}/${{ github.repository }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+            
+            View logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: devops@payroll.com
+          from: ci-bot@payroll.com
+
+      # Create GitHub issue on failure
+      - name: 🐛 Create GitHub Issue on Failure
+        if: failure() && github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `❌ Build failed on ${context.ref_name}`,
+              body: `
+              Build run failed
+              
+              - Commit: ${context.sha}
+              - Author: ${context.actor}
+              - Branch: ${context.ref_name}
+              - [View Logs](${context.payload.repository.html_url}/actions/runs/${context.runId})
+              `,
+              labels: ['bug', 'ci-cd']
+            });
