@@ -417,44 +417,44 @@ jobs:
 
     steps:
       # Slack notification on failure
-      - name: 💬 Slack Notification (Failure)
-        if: failure()
-        uses: slackapi/slack-github-action@v1
-        with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          payload: |
-            {
-              "text": "❌ Build Failed",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*❌ Build FAILED*\nRepository: ${{ github.repository }}\nBranch: ${{ github.ref_name }}\nAuthor: ${{ github.actor }}\nCommit: ${{ github.sha }}\nLogs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                  }
-                }
-              ]
-            }
+      # - name: 💬 Slack Notification (Failure)
+      #   if: failure()
+      #   uses: slackapi/slack-github-action@v1
+      #   with:
+      #     webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      #     payload: |
+      #       {
+      #         "text": "❌ Build Failed",
+      #         "blocks": [
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*❌ Build FAILED*\nRepository: ${{ github.repository }}\nBranch: ${{ github.ref_name }}\nAuthor: ${{ github.actor }}\nCommit: ${{ github.sha }}\nLogs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      #             }
+      #           }
+      #         ]
+      #       }
 
       # Slack notification on success
-      - name: 💬 Slack Notification (Success)
-        if: success()
-        uses: slackapi/slack-github-action@v1
-        with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
-          payload: |
-            {
-              "text": "✅ Build Passed",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*✅ Build PASSED*\nRepository: ${{ github.repository }}\nBranch: ${{ github.ref_name }}\nAuthor: ${{ github.actor }}"
-                  }
-                }
-              ]
-            }
+      # - name: 💬 Slack Notification (Success)
+      #   if: success()
+      #   uses: slackapi/slack-github-action@v1
+      #   with:
+      #     webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      #     payload: |
+      #       {
+      #         "text": "✅ Build Passed",
+      #         "blocks": [
+      #           {
+      #             "type": "section",
+      #             "text": {
+      #               "type": "mrkdwn",
+      #               "text": "*✅ Build PASSED*\nRepository: ${{ github.repository }}\nBranch: ${{ github.ref_name }}\nAuthor: ${{ github.actor }}"
+      #             }
+      #           }
+      #         ]
+      #       }
 
       # Email notification on failure
       - name: 📧 Email Notification (Failure)
@@ -474,26 +474,28 @@ jobs:
             Author: ${{ github.actor }}
             
             View logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          to: devops@payroll.com
-          from: ci-bot@payroll.com
+          # to: devops@payroll.com
+          # from: ci-bot@payroll.com
+          to: shahriarp86@gmail.com
+          from: shahriar.parvez.sust.cse@gmail.com
 
       # Create GitHub issue on failure
-      - name: 🐛 Create GitHub Issue on Failure
-        if: failure() && github.event_name == 'push'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `❌ Build failed on ${context.ref_name}`,
-              body: `
-              Build run failed
-              
-              - Commit: ${context.sha}
-              - Author: ${context.actor}
-              - Branch: ${context.ref_name}
-              - [View Logs](${context.payload.repository.html_url}/actions/runs/${context.runId})
-              `,
-              labels: ['bug', 'ci-cd']
-            });
+      # - name: 🐛 Create GitHub Issue on Failure
+      #   if: failure() && github.event_name == 'push'
+      #   uses: actions/github-script@v7
+      #   with:
+      #     script: |
+      #       github.rest.issues.create({
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         title: `❌ Build failed on ${context.ref_name}`,
+      #         body: `
+      #         Build run failed
+      #         
+      #         - Commit: ${context.sha}
+      #         - Author: ${context.actor}
+      #         - Branch: ${context.ref_name}
+      #         - [View Logs](${context.payload.repository.html_url}/actions/runs/${context.runId})
+      #         `,
+      #         labels: ['bug', 'ci-cd']
+      #       });
