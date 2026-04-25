@@ -145,13 +145,15 @@ pipeline {
             }
             steps {
                 script {
-                    // GitHub plugin not installed - using email notifications instead
-                    // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
-                    //     description: 'Running unit tests...',
-                    //     context: 'Jenkins Tests',
-                    //     status: 'PENDING'
-                    // )
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - TESTS PENDING
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'Running unit tests...',
+                        context: 'Jenkins Tests',
+                        status: 'PENDING'
+                    )
                 }
                 
                 echo '🧪 Running unit tests...'
