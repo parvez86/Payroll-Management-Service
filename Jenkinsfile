@@ -470,8 +470,14 @@ pipeline {
         failure {
             echo '❌ Pipeline failed'
             emailext(
-                to: '${CHANGE_AUTHOR_EMAIL},devops@payroll.com',
-                cc: '${CHANGE_AUTHOR_EMAIL}',
+                // Email Recipients: Update based on your team structure
+                // Patterns:
+                // - PR Author: ${CHANGE_AUTHOR_EMAIL} - Send to developer who made the change
+                // - DevOps Team: devops@payroll.com - Infrastructure/deployment issues
+                // - QA Team: qa@payroll.com - Test failures
+                // - Tech Leads: tech-leads@payroll.com - Critical failures
+                // Current: Test recipient
+                to: '${CHANGE_AUTHOR_EMAIL},shahriarp86@gmail.com',
                 subject: "❌ BUILD FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER} - ${env.GIT_BRANCH}",
                 body: '''
 ================================================================================
@@ -518,7 +524,7 @@ REMEDIATION
 CI/CD PIPELINE HELP
 ================================================================================
 Documentation: https://github.com/YOUR_ORG/Payroll-Management-Service/docs
-Contact: devops@payroll.com
+Contact: shahriarp86@gmail.com
 ''',
                 recipientProviders: [developers(), requestor(), broken(), culprits()],
                 attachLog: true,
@@ -534,10 +540,13 @@ Contact: devops@payroll.com
             echo '✅ Pipeline completed successfully'
             script {
                 if (env.GIT_BRANCH == 'origin/master' || env.GIT_BRANCH == 'master') {
-                    // Production deployment success - notify more eyes
+                    // Production Success: Notify DevOps and Tech Leadership
+                    // Email Recipients:
+                    // - devops@payroll.com (deployment confirmation)
+                    // - tech-leads@payroll.com (visibility for leadership)
+                    // Current: Test recipient
                     emailext(
-                        to: 'devops@payroll.com',
-                        cc: 'tech-leads@payroll.com',
+                        to: 'shahriarp86@gmail.com',
                         subject: "✅ PRODUCTION BUILD SUCCESSFUL: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: '''
 ================================================================================
@@ -570,16 +579,16 @@ Next Steps:
 2. Approve production deployment in Jenkins
 3. Monitor deployment logs
 
-Contact: devops@payroll.com
+Contact: shahriarp86@gmail.com
 ================================================================================
 ''',
                         attachLog: false,
                         mimeType: 'text/plain'
                     )
                 } else if (env.GIT_BRANCH == 'origin/develop' || env.GIT_BRANCH == 'develop') {
-                    // Staging success - notify QA and dev leads
+                    // Staging Deployment Success: Notify QA Team\n                    // Email Recipients:\n                    // - qa@payroll.com (staging deployment ready for testing)\n                    // - devops@payroll.com (deployment confirmation)\n                    // Current: Test recipient (shahriarp86@gmail.com)\n                    // Production Setup: to: 'qa@payroll.com,devops@payroll.com',
                     emailext(
-                        to: 'qa@payroll.com,devops@payroll.com',
+                        to: 'shahriarp86@gmail.com',
                         subject: "✅ STAGING BUILD SUCCESSFUL: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: '''
 ================================================================================
@@ -594,14 +603,14 @@ All tests and security scans passed.
 
 Build URL: ${BUILD_URL}
 
-Contact: devops@payroll.com
+Contact: shahriarp86@gmail.com
 ================================================================================
 ''',
                         attachLog: false,
                         mimeType: 'text/plain'
                     )
                 } else {
-                    // Feature branch success - notify author only
+                    // Feature Branch Success: Notify Author Only\n                    // Email Recipients:\n                    // - ${CHANGE_AUTHOR_EMAIL} (developer notification - PR is passing)\n                    // Current: Test recipient (only PR author for feature branches)\n                    // Note: Use this pattern for feature/* branches
                     emailext(
                         to: '${CHANGE_AUTHOR_EMAIL}',
                         subject: "✅ BUILD SUCCESSFUL: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
@@ -619,8 +628,13 @@ ${BUILD_URL}
         
         unstable {
             echo '⚠️ Pipeline completed with warnings'
+            // Build Warnings/Unstable: Notify PR Author and DevOps
+            // Email Recipients:
+            // - ${CHANGE_AUTHOR_EMAIL} (developer needs to fix warnings)
+            // - devops@payroll.com (infrastructure visibility)
+            // Current: Test recipient
             emailext(
-                to: '${CHANGE_AUTHOR_EMAIL},devops@payroll.com',
+                to: '${CHANGE_AUTHOR_EMAIL},shahriarp86@gmail.com',
                 subject: "⚠️ BUILD UNSTABLE: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                 body: '''
 Build completed but with warnings/test failures.
