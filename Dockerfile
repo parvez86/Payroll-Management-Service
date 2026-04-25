@@ -1,7 +1,7 @@
 # =========================
 # Stage 1: Build (optimized caching)
 # =========================
-FROM gradle:8.14.3-jdk24-alpine AS build
+FROM gradle:8.14.3-jdk21-alpine AS build
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ RUN gradle clean build -x test --no-daemon
 # =========================
 # Stage 2: Runtime (minimal + secure)
 # =========================
-FROM eclipse-temurin:24-jre-noble
+FROM eclipse-temurin:21-jre-noble
 
 LABEL org.opencontainers.image.title="payroll-service"
 LABEL org.opencontainers.image.version="1.0.0"
