@@ -119,7 +119,7 @@ pipeline {
                     // ========================================
                     githubNotify(
                         credentialsId: 'github-payroll-token',
-                        description: 'Build failed',
+                        description: 'Build failed! ❌',
                         context: 'Jenkins Build',
                         status: 'FAILURE'
                     )
@@ -131,7 +131,7 @@ pipeline {
                     // ========================================
                     githubNotify(
                         credentialsId: 'github-payroll-token',
-                        description: 'Build passed',
+                        description: 'Build passed! ✅',
                         context: 'Jenkins Build',
                         status: 'SUCCESS'
                     )
@@ -145,15 +145,13 @@ pipeline {
             }
             steps {
                 script {
-                    // ========================================
-                    // FEATURE 4: GITHUB STATUS - TESTS PENDING
-                    // ========================================
-                    githubNotify(
-                        credentialsId: 'github-payroll-token',
-                        description: 'Running unit tests...',
-                        context: 'Jenkins Tests',
-                        status: 'PENDING'
-                    )
+                    // GitHub plugin not installed - using email notifications instead
+                    // githubNotify(
+                    //     credentialsId: 'github-payroll-token',
+                    //     description: 'Running unit tests...',
+                    //     context: 'Jenkins Tests',
+                    //     status: 'PENDING'
+                    // )
                 }
                 
                 echo '🧪 Running unit tests...'
@@ -177,9 +175,6 @@ pipeline {
                 }
                 failure {
                     echo '❌ Unit tests failed'
-                    // ========================================
-                    // FEATURE 4: GITHUB STATUS - TESTS FAILED
-                    // ========================================
                     githubNotify(
                         credentialsId: 'github-payroll-token',
                         description: 'Unit tests failed',
@@ -189,9 +184,6 @@ pipeline {
                 }
                 success {
                     echo '✅ All unit tests passed'
-                    // ========================================
-                    // FEATURE 4: GITHUB STATUS - TESTS SUCCESS
-                    // ========================================
                     githubNotify(
                         credentialsId: 'github-payroll-token',
                         description: 'All tests passed',
@@ -224,9 +216,6 @@ pipeline {
             }
             steps {
                 script {
-                    // ========================================
-                    // FEATURE 4: GITHUB STATUS - SECURITY PENDING
-                    // ========================================
                     githubNotify(
                         credentialsId: 'github-payroll-token',
                         description: 'Running security scan...',
@@ -251,9 +240,6 @@ pipeline {
                 }
                 failure {
                     echo '❌ Security scan found issues'
-                    // ========================================
-                    // FEATURE 4: GITHUB STATUS - SECURITY FAILED
-                    // ========================================
                     githubNotify(
                         credentialsId: 'github-payroll-token',
                         description: 'Security vulnerabilities found',
@@ -263,9 +249,6 @@ pipeline {
                 }
                 success {
                     echo '✅ Security scan passed'
-                    // ========================================
-                    // FEATURE 4: GITHUB STATUS - SECURITY SUCCESS
-                    // ========================================
                     githubNotify(
                         credentialsId: 'github-payroll-token',
                         description: 'No security issues found',
@@ -282,9 +265,6 @@ pipeline {
             }
             steps {
                 script {
-                    // ========================================
-                    // FEATURE 4: GITHUB STATUS - DOCKER PENDING
-                    // ========================================
                     githubNotify(
                         credentialsId: 'github-payroll-token',
                         description: 'Building Docker image...',
@@ -310,9 +290,6 @@ pipeline {
             post {
                 failure {
                     echo '❌ Docker build failed'
-                    // ========================================
-                    // FEATURE 4: GITHUB STATUS - DOCKER FAILED
-                    // ========================================
                     githubNotify(
                         credentialsId: 'github-payroll-token',
                         description: 'Docker build failed',
@@ -322,9 +299,6 @@ pipeline {
                 }
                 success {
                     echo '✅ Docker image built successfully'
-                    // ========================================
-                    // FEATURE 4: GITHUB STATUS - DOCKER SUCCESS
-                    // ========================================
                     githubNotify(
                         credentialsId: 'github-payroll-token',
                         description: 'Docker image built',
