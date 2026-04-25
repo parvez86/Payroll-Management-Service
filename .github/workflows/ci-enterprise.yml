@@ -20,6 +20,7 @@ env:
   REGISTRY: docker.io
   IMAGE_NAME: payroll-management-service
   JAVA_VERSION: '21'
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   # ============================================================================
@@ -474,8 +475,8 @@ jobs:
             Author: ${{ github.actor }}
             
             View logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          # to: devops@payroll.com
-          # from: ci-bot@payroll.com
+          to: devops@payroll.com
+          from: ci-bot@payroll.com
       # Create GitHub issue on failure
       # - name: 🐛 Create GitHub Issue on Failure
       #   if: failure() && github.event_name == 'push'

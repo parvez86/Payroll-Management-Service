@@ -62,21 +62,14 @@ jobs:
         env:
           SPRING_PROFILES_ACTIVE: ci
 
-      - name: Run unit tests (if tests exist)
-        run: |
-          if [ -d "src/test/java" ] && find src/test/java -name "*.java" | grep -q .; then
-            echo "✅ Test files found, running tests..."
-            ./gradlew test --no-daemon
-          else
-            echo "⏭️  No test files found, skipping test execution"
-            echo "Note: Add test files to src/test/java/ to enable testing"
-          fi
+      - name: Run unit tests
+        run: ./gradlew test --no-daemon
         env:
           SPRING_PROFILES_ACTIVE: ci
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/payroll_db
           SPRING_DATASOURCE_USERNAME: payroll_user
           SPRING_DATASOURCE_PASSWORD: payroll_pass
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Publish test results
         if: always()
@@ -86,7 +79,6 @@ jobs:
           path: '**/build/test-results/test/*.xml'
           reporter: 'java-junit'
           fail-on-error: false
-        continue-on-error: true
 
       - name: Upload build artifacts
         if: success()
