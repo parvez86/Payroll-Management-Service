@@ -67,6 +67,17 @@ echo.
 echo 💡 TIP: Jenkins might take a few minutes to fully initialize on first start.
 echo    The health check will show "health: starting" initially.
 echo.
+echo 📖 JENKINS 5-FEATURE SETUP (Production-Grade CI/CD):
+echo    After Jenkins is running, complete the setup for 5 new features:
+echo    1. GitHub Webhook Triggers
+echo    2. Email Notifications
+echo    3. Blue Ocean UI
+echo    4. GitHub Status Checks
+echo    5. Branch Protection
+echo.
+echo    Quick start: docs\START-HERE-5-FEATURES.md (5 min)
+echo    Full setup: docs\SETUP-5-FEATURES-CHECKLIST.md (45 min)
+echo.
 echo To view Jenkins logs, run:
 echo    docker-compose -f jenkins/docker-compose.yml logs jenkins
 echo.

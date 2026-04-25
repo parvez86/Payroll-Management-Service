@@ -39,4 +39,4 @@ out/
 ### VS Code ###
 .vscode/
 jdk-24
-.github
+# .github

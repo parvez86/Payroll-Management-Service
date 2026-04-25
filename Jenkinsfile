@@ -1,6 +1,7 @@
 // Jenkinsfile - Payroll Management System
 // Pipeline definition for Jenkins CI/CD
 // Supports: master (prod) → develop (staging) → feature/* (dev)
+// Features: Webhooks, Email, GitHub Status, Blue Ocean, Branch Protection
 
 pipeline {
     agent any
@@ -17,6 +18,20 @@ pipeline {
         
         // Disable concurrent builds for main branch
         disableConcurrentBuilds(abortPrevious: false)
+    }
+    
+    // ========================================
+    // FEATURE 1: GITHUB WEBHOOK TRIGGERS
+    // ========================================
+    triggers {
+        // GitHub push events trigger immediately (webhook)
+        githubPush()
+        
+        // Fallback: Scan for new branches/commits hourly
+        pollSCM('H H * * *')
+        
+        // Optional: Rebuild on specific times
+        // cron('H H(0-2) * * *')  // Daily at midnight-2am
     }
     
     parameters {
@@ -81,15 +96,45 @@ pipeline {
         
         stage('Build') {
             steps {
+                script {
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - BUILD PENDING
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'Build in progress...',
+                        context: 'Jenkins Build',
+                        status: 'PENDING'
+                    )
+                }
+                
                 echo '🏗️ Building application...'
                 sh './gradlew clean build -x test --no-daemon --info'
             }
             post {
                 failure {
                     echo '❌ Build failed'
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - BUILD FAILURE
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'Build failed',
+                        context: 'Jenkins Build',
+                        status: 'FAILURE'
+                    )
                 }
                 success {
                     echo '✅ Build successful'
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - BUILD SUCCESS
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'Build passed',
+                        context: 'Jenkins Build',
+                        status: 'SUCCESS'
+                    )
                 }
             }
         }
@@ -99,6 +144,18 @@ pipeline {
                 expression { !params.SKIP_TESTS }
             }
             steps {
+                script {
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - TESTS PENDING
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'Running unit tests...',
+                        context: 'Jenkins Tests',
+                        status: 'PENDING'
+                    )
+                }
+                
                 echo '🧪 Running unit tests...'
                 sh './gradlew test --no-daemon --info'
             }
@@ -117,6 +174,30 @@ pipeline {
                         reportName: '📊 Unit Test Report',
                         keepAll: true
                     ])
+                }
+                failure {
+                    echo '❌ Unit tests failed'
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - TESTS FAILED
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'Unit tests failed',
+                        context: 'Jenkins Tests',
+                        status: 'FAILURE'
+                    )
+                }
+                success {
+                    echo '✅ All unit tests passed'
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - TESTS SUCCESS
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'All tests passed',
+                        context: 'Jenkins Tests',
+                        status: 'SUCCESS'
+                    )
                 }
             }
         }
@@ -142,6 +223,18 @@ pipeline {
                 expression { !params.SKIP_SECURITY }
             }
             steps {
+                script {
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - SECURITY PENDING
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'Running security scan...',
+                        context: 'Jenkins Security',
+                        status: 'PENDING'
+                    )
+                }
+                
                 echo '🔒 Running security scans...'
                 sh '''
                     # OWASP Dependency Check
@@ -156,6 +249,30 @@ pipeline {
                 always {
                     archiveArtifacts artifacts: 'build/reports/dependency-check-report.*', allowEmptyArchive: true
                 }
+                failure {
+                    echo '❌ Security scan found issues'
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - SECURITY FAILED
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'Security vulnerabilities found',
+                        context: 'Jenkins Security',
+                        status: 'FAILURE'
+                    )
+                }
+                success {
+                    echo '✅ Security scan passed'
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - SECURITY SUCCESS
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'No security issues found',
+                        context: 'Jenkins Security',
+                        status: 'SUCCESS'
+                    )
+                }
             }
         }
         
@@ -164,6 +281,18 @@ pipeline {
                 branch 'master'
             }
             steps {
+                script {
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - DOCKER PENDING
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'Building Docker image...',
+                        context: 'Jenkins Docker',
+                        status: 'PENDING'
+                    )
+                }
+                
                 echo '🐳 Building Docker image...'
                 sh '''
                     BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
@@ -181,9 +310,27 @@ pipeline {
             post {
                 failure {
                     echo '❌ Docker build failed'
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - DOCKER FAILED
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'Docker build failed',
+                        context: 'Jenkins Docker',
+                        status: 'FAILURE'
+                    )
                 }
                 success {
                     echo '✅ Docker image built successfully'
+                    // ========================================
+                    // FEATURE 4: GITHUB STATUS - DOCKER SUCCESS
+                    // ========================================
+                    githubNotify(
+                        credentialsId: 'github-payroll-token',
+                        description: 'Docker image built',
+                        context: 'Jenkins Docker',
+                        status: 'SUCCESS'
+                    )
                 }
             }
         }
@@ -317,18 +464,172 @@ pipeline {
             // cleanWs()
         }
         
+        // ========================================
+        // FEATURE 2: EMAIL NOTIFICATIONS - FAILURE
+        // ========================================
         failure {
             echo '❌ Pipeline failed'
-            // Send failure notifications here
+            emailext(
+                to: '${CHANGE_AUTHOR_EMAIL},devops@payroll.com',
+                cc: '${CHANGE_AUTHOR_EMAIL}',
+                subject: "❌ BUILD FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER} - ${env.GIT_BRANCH}",
+                body: '''
+================================================================================
+BUILD FAILURE REPORT
+================================================================================
+
+PROJECT: ${JOB_NAME}
+BUILD NUMBER: ${BUILD_NUMBER}
+BUILD STATUS: FAILED ❌
+BUILD TIME: ${BUILD_DURATION}
+
+BRANCH: ${GIT_BRANCH}
+COMMIT: ${GIT_COMMIT}
+COMMIT MESSAGE: ${GIT_COMMIT_MSG}
+AUTHOR: ${CHANGE_AUTHOR}
+EMAIL: ${CHANGE_AUTHOR_EMAIL}
+
+FAILED STAGE: See console output below
+
+================================================================================
+BUILD DETAILS
+================================================================================
+Build URL: ${BUILD_URL}
+Console Log: ${BUILD_URL}console
+
+Jenkins Job: ${JOB_NAME}
+Build Number: #${BUILD_NUMBER}
+
+================================================================================
+REMEDIATION
+================================================================================
+1. Check the console log above for specific error messages
+2. Common issues:
+   - Compile errors: Review Java/Gradle errors in console
+   - Test failures: Check which unit tests failed
+   - Security scan: Review vulnerability report
+   - Docker build: Check Dockerfile and dependencies
+
+3. To retry:
+   - Click "Rebuild" on Jenkins job page
+   - Or push new commit to same branch
+
+================================================================================
+CI/CD PIPELINE HELP
+================================================================================
+Documentation: https://github.com/YOUR_ORG/Payroll-Management-Service/docs
+Contact: devops@payroll.com
+''',
+                recipientProviders: [developers(), requestor(), broken(), culprits()],
+                attachLog: true,
+                compressLog: true,
+                mimeType: 'text/plain'
+            )
         }
         
+        // ========================================
+        // FEATURE 2: EMAIL NOTIFICATIONS - SUCCESS
+        // ========================================
         success {
             echo '✅ Pipeline completed successfully'
-            // Send success notifications here
+            script {
+                if (env.GIT_BRANCH == 'origin/master' || env.GIT_BRANCH == 'master') {
+                    // Production deployment success - notify more eyes
+                    emailext(
+                        to: 'devops@payroll.com',
+                        cc: 'tech-leads@payroll.com',
+                        subject: "✅ PRODUCTION BUILD SUCCESSFUL: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        body: '''
+================================================================================
+🚀 PRODUCTION DEPLOYMENT READY
+================================================================================
+
+PROJECT: ${JOB_NAME}
+BUILD STATUS: SUCCESS ✅
+BUILD TIME: ${BUILD_DURATION}
+
+BRANCH: ${GIT_BRANCH} (PRODUCTION)
+COMMIT: ${GIT_COMMIT}
+COMMIT MESSAGE: ${GIT_COMMIT_MSG}
+BUILT BY: ${CHANGE_AUTHOR}
+
+All stages passed:
+✅ Build
+✅ Unit Tests
+✅ Code Quality
+✅ Security Scan
+✅ Docker Build
+✅ Docker Security Scan
+
+Ready for manual production deployment approval.
+
+Build URL: ${BUILD_URL}
+
+Next Steps: 
+1. Review changes
+2. Approve production deployment in Jenkins
+3. Monitor deployment logs
+
+Contact: devops@payroll.com
+================================================================================
+''',
+                        attachLog: false,
+                        mimeType: 'text/plain'
+                    )
+                } else if (env.GIT_BRANCH == 'origin/develop' || env.GIT_BRANCH == 'develop') {
+                    // Staging success - notify QA and dev leads
+                    emailext(
+                        to: 'qa@payroll.com,devops@payroll.com',
+                        subject: "✅ STAGING BUILD SUCCESSFUL: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        body: '''
+================================================================================
+✅ STAGING BUILD SUCCESSFUL
+================================================================================
+
+PROJECT: ${JOB_NAME}
+BUILD STATUS: SUCCESS ✅
+ENVIRONMENT: STAGING
+
+All tests and security scans passed.
+
+Build URL: ${BUILD_URL}
+
+Contact: devops@payroll.com
+================================================================================
+''',
+                        attachLog: false,
+                        mimeType: 'text/plain'
+                    )
+                } else {
+                    // Feature branch success - notify author only
+                    emailext(
+                        to: '${CHANGE_AUTHOR_EMAIL}',
+                        subject: "✅ BUILD SUCCESSFUL: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        body: '''
+Build passed all checks! Ready for code review.
+
+${BUILD_URL}
+''',
+                        attachLog: false,
+                        mimeType: 'text/plain'
+                    )
+                }
+            }
         }
         
         unstable {
             echo '⚠️ Pipeline completed with warnings'
+            emailext(
+                to: '${CHANGE_AUTHOR_EMAIL},devops@payroll.com',
+                subject: "⚠️ BUILD UNSTABLE: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: '''
+Build completed but with warnings/test failures.
+
+${BUILD_URL}
+''',
+                attachLog: false,
+                mimeType: 'text/plain'
+            )
         }
         
         cleanup {

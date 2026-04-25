@@ -1,0 +1,85 @@
+name: Security Scanning
+
+# Comprehensive security scanning including dependency checks and secret detection
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+  schedule:
+    # Run daily at 2 AM UTC for scheduled security scanning
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: '21'
+
+jobs:
+  dependency-check:
+    name: Dependency Vulnerability Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'payroll-management-service'
+          path: '.'
+          format: 'SARIF'
+          args: >
+            --enableExperimental
+
+      - name: Upload Dependency Check results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'reports/dependency-check-report.sarif'
+          category: 'Dependency-Check'
+
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog Secret Scanning
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [ dependency-check, secret-scan ]
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Security check summary
+        run: |
+          echo "Security Scanning Complete"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Dependency Check: ${{ needs.dependency-check.result }}"
+          echo "Secret Detection: ${{ needs.secret-scan.result }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "View security findings in GitHub Security tab:"
+          echo "Settings > Code security and analysis > Code scanning alerts"

@@ -1,0 +1,166 @@
+name: Quality & Security Scanning
+
+# Comprehensive security and code quality analysis
+# Consolidated single workflow for all security and quality checks
+# Optimized to eliminate redundancy and unnecessary tool duplication
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+  schedule:
+    # Run comprehensive security scan daily at 2 AM UTC
+    - cron: '0 2 * * *'
+    # Run weekly CodeQL analysis on Sunday at 3 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+env:
+  JAVA_VERSION: '21'
+
+jobs:
+  # ============================================================================
+  # CodeQL SAST - Static Application Security Testing for Java vulnerabilities
+  # ============================================================================
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: 'java'
+          queries: security-and-quality
+
+      - name: Setup Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Build application
+        run: ./gradlew clean build -x test --no-daemon
+        env:
+          SPRING_PROFILES_ACTIVE: ci
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:java'
+
+  # ============================================================================
+  # OWASP Dependency Check - Identify vulnerable project dependencies
+  # ============================================================================
+  dependency-check:
+    name: OWASP Dependency Vulnerability Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'payroll-management-service'
+          path: '.'
+          format: 'SARIF'
+          args: >
+            --enableExperimental
+
+      - name: Upload Dependency Check results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'reports/dependency-check-report.sarif'
+          category: 'Dependency-Check'
+
+  # ============================================================================
+  # TruffleHog Secrets Detection - Prevent credential leaks
+  # ============================================================================
+  secret-scan:
+    name: Secret Detection (TruffleHog)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog Secret Scanner
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # ============================================================================
+  # Consolidated Security Summary - Report all findings in one view
+  # ============================================================================
+  security-summary:
+    name: Unified Security Report
+    runs-on: ubuntu-latest
+    needs: [ codeql, dependency-check, secret-scan ]
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Generate consolidated security summary
+        run: |
+          echo ""
+          echo "╔════════════════════════════════════════════════════════════════╗"
+          echo "║           🔒 SECURITY & QUALITY SCANNING COMPLETE             ║"
+          echo "╚════════════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "📊 SCAN RESULTS"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "CodeQL Analysis (SAST):           ${{ needs.codeql.result }}"
+          echo "OWASP Dependency Check:          ${{ needs.dependency-check.result }}"
+          echo "Secret Detection (TruffleHog):   ${{ needs.secret-scan.result }}"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📍 VIEW DETAILED FINDINGS"
+          echo "   • GitHub Security Tab: Settings > Code security and analysis"
+          echo "   • Code Scanning Alerts: https://github.com/${{ github.repository }}/security/code-scanning"
+          echo "   • Dependency Alerts: https://github.com/${{ github.repository }}/security/dependabot"
+          echo ""
+          echo "⏱️  SCAN SCHEDULE"
+          echo "   • On Push: Runs immediately on push to master/develop"
+          echo "   • On PR: Runs on pull requests to master/develop"
+          echo "   • Daily: 02:00 UTC - Full security scan"
+          echo "   • Weekly: 03:00 UTC Sunday - Extended CodeQL analysis"
+          echo ""
+          
+          # Determine overall status
+          if [[ "${{ needs.codeql.result }}" == "failure" || "${{ needs.dependency-check.result }}" == "failure" || "${{ needs.secret-scan.result }}" == "failure" ]]; then
+            echo "⚠️  STATUS: ISSUES DETECTED - Review findings above"
+            exit 1
+          else
+            echo "✅ STATUS: All security scans passed"
+            exit 0
+          fi
