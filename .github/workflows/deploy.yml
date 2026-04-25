@@ -1,0 +1,210 @@
+name: Deploy - Manual Deployment
+
+# Manual deployment workflow for controlled environment deployments
+# Triggered manually from Actions tab with environment and image selection
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      image-tag:
+        description: 'Docker image tag (default: latest)'
+        required: false
+        type: string
+      skip-tests:
+        description: 'Skip integration tests before deployment'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  JAVA_VERSION: '21'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  PORT: 20001
+
+jobs:
+  # ============================================================================
+  # PRE-DEPLOYMENT VALIDATION
+  # ============================================================================
+  validate:
+    name: Validate Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      image-tag: ${{ steps.set-tag.outputs.tag }}
+      deployment-allowed: ${{ steps.check-permission.outputs.allowed }}
+
+    steps:
+      - name: Determine image tag
+        id: set-tag
+        run: |
+          if [ -z "${{ github.event.inputs.image-tag }}" ]; then
+            TAG="latest"
+          else
+            TAG="${{ github.event.inputs.image-tag }}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Using image tag: $TAG"
+
+      - name: Check deployment permissions
+        id: check-permission
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+          BRANCH="${{ github.ref_name }}"
+          
+          case $ENV in
+            staging)
+              echo "allowed=true" >> $GITHUB_OUTPUT
+              echo "Environment: staging (allowed from any branch)"
+              ;;
+            production)
+              if [ "$BRANCH" = "master" ]; then
+                echo "allowed=true" >> $GITHUB_OUTPUT
+                echo "Environment: production (allowed from master branch)"
+              else
+                echo "allowed=false" >> $GITHUB_OUTPUT
+                echo "ERROR: Production deployments only allowed from main branch"
+              fi
+              ;;
+            *)
+              echo "allowed=false" >> $GITHUB_OUTPUT
+              echo "ERROR: Unknown environment"
+              ;;
+          esac
+
+  # ============================================================================
+  # DEPLOYMENT
+  # ============================================================================
+  deploy:
+    name: Deploy to ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.deployment-allowed == 'true'
+    timeout-minutes: 30
+    environment:
+      name: ${{ github.event.inputs.environment }}
+      url: http://localhost:${{ env.PORT }}/pms/api/v1
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment variables
+        id: env-config
+        run: |
+          ENV="${{ github.event.inputs.environment }}"
+          
+          case $ENV in
+            staging)
+              echo "db-host=${{ secrets.STAGING_DB_HOST }}" >> $GITHUB_OUTPUT
+              echo "spring-profile=staging" >> $GITHUB_OUTPUT
+              ;;
+            production)
+              echo "db-host=${{ secrets.PROD_DB_HOST }}" >> $GITHUB_OUTPUT
+              echo "spring-profile=prod" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Deploy application with Docker
+        run: |
+          echo "Deploying to ${{ github.event.inputs.environment }}"
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.image-tag }}"
+          
+          # Create docker-compose file
+          cat > docker-compose.deploy.yml <<'EOF'
+          version: '3.9'
+          services:
+            payroll-service:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.validate.outputs.image-tag }}
+              container_name: payroll-service
+              restart: unless-stopped
+              ports:
+                - "${{ env.PORT }}:8080"
+              environment:
+                SPRING_PROFILES_ACTIVE: ${{ steps.env-config.outputs.spring-profile }}
+                SPRING_DATASOURCE_URL: jdbc:postgresql://${{ steps.env-config.outputs.db-host }}/payroll_db
+                SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+                SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+                JWT_SECRET: ${{ secrets.JWT_SECRET }}
+                JWT_EXPIRATION: ${{ secrets.JWT_EXPIRATION }}
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost:8080/pms/api/v1/actuator/health"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+          EOF
+          
+          # Deploy
+          docker-compose -f docker-compose.deploy.yml pull
+          docker-compose -f docker-compose.deploy.yml up -d
+          echo "Application deployed successfully"
+
+      - name: Wait for application health check
+        run: |
+          echo "Waiting for application to be ready..."
+          max_attempts=30
+          attempt=0
+          
+          while [ $attempt -lt $max_attempts ]; do
+            if curl -sf http://localhost:${{ env.PORT }}/pms/api/v1/actuator/health > /dev/null 2>&1; then
+              echo "Application is ready"
+              exit 0
+            fi
+            
+            attempt=$((attempt + 1))
+            echo "Attempt $attempt/$max_attempts - waiting for application..."
+            sleep 2
+          done
+          
+          echo "ERROR: Application failed to become healthy"
+          docker-compose -f docker-compose.deploy.yml logs
+          exit 1
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying deployment..."
+          HEALTH=$(curl -s http://localhost:${{ env.PORT }}/pms/api/v1/actuator/health)
+          
+          if echo "$HEALTH" | grep -q '"status":"UP"'; then
+            echo "Deployment verified successfully"
+          else
+            echo "ERROR: Health check failed"
+            echo "Response: $HEALTH"
+            exit 1
+          fi
+
+  # Notify team of deployment status
+  notify:
+    name: Send Notification
+    runs-on: ubuntu-latest
+    needs: [ validate, deploy ]
+    if: always()
+    permissions:
+      contents: read
+
+    steps:
+      - name: Deployment result
+        run: |
+          echo ""
+          echo "╔════════════════════════════════════════════════════════════════╗"
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "║  ✅ DEPLOYMENT SUCCESSFUL                                    ║"
+          else
+            echo "║  ❌ DEPLOYMENT FAILED                                        ║"
+          fi
+          echo "╚════════════════════════════════════════════════════════════════╝"
+          echo ""
+          echo "Deployment Details:"
+          echo "  Environment: ${{ github.event.inputs.environment }}"
+          echo "  Image Tag:   ${{ needs.validate.outputs.image-tag }}"
+          echo "  Deployed by: ${{ github.actor }}"
+          echo "  Time:        $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+          echo ""
+          echo "Details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
