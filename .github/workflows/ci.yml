@@ -24,6 +24,9 @@ jobs:
     name: Build & Test
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      checks: write
+      contents: read
 
     # PostgreSQL service for integration tests
     services:
