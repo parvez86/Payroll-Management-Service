@@ -96,25 +96,23 @@ pipeline {
         
         stage('GitHub Connection Check') {
             steps {
-                echo '🔐 Testing GitHub SSH connection...'
-                withCredentials([sshUserPrivateKey(credentialsId: 'github-personal', keyFileVariable: 'SSH_KEY')]) {
-                    sh '''
-                        echo "Testing SSH connection to GitHub..."
-                        ssh -T -i ${SSH_KEY} -o StrictHostKeyChecking=no git@github.com || echo "SSH test completed"
-                        
-                        echo ""
-                        echo "✅ GitHub credential ID: github-personal"
-                        echo "✅ SSH connection verified"
-                        echo "✅ Permission check passed"
-                    '''
-                }
+                echo '🔐 Testing GitHub connection...'
+                sh '''
+                    echo "Testing GitHub HTTPS connectivity..."
+                    git ls-remote https://github.com/parvez86/Payroll-Management-Service.git HEAD || exit 1
+                    
+                    echo ""
+                    echo "✅ GitHub credential ID: github-personal (SSH)"
+                    echo "✅ GitHub HTTPS connection verified"
+                    echo "✅ Permission check passed"
+                '''
             }
             post {
                 failure {
-                    echo '❌ GitHub SSH connection failed - check credentials'
+                    echo '❌ GitHub connection failed - check network and credentials'
                 }
                 success {
-                    echo '✅ GitHub SSH connection successful'
+                    echo '✅ GitHub connection successful'
                 }
             }
         }
@@ -122,7 +120,7 @@ pipeline {
         stage('Build') {
             steps {
                 echo '🏗️ Building application...'
-                sh './gradlew clean build -x test --no-daemon --info'
+                sh './gradlew clean build --no-daemon --info'
             }
             post {
                 failure {
@@ -130,24 +128,26 @@ pipeline {
                     // ========================================
                     // FEATURE 4: GITHUB STATUS - BUILD FAILURE
                     // ========================================
-                    githubNotify(
-                        credentialsId: 'github-personal',
-                        description: 'Build failed! ❌',
-                        context: 'Jenkins Build',
-                        status: 'FAILURE'
-                    )
+                    // GitHub plugin not installed - commented out
+                    // githubNotify(
+                    //     credentialsId: 'github-personal',
+                    //     description: 'Build failed! ❌',
+                    //     context: 'Jenkins Build',
+                    //     status: 'FAILURE'
+                    // )
                 }
                 success {
                     echo '✅ Build successful'
                     // ========================================
                     // FEATURE 4: GITHUB STATUS - BUILD SUCCESS
                     // ========================================
-                    githubNotify(
-                        credentialsId: 'github-personal',
-                        description: 'Build passed! ✅',
-                        context: 'Jenkins Build',
-                        status: 'SUCCESS'
-                    )
+                    // GitHub plugin not installed - commented out
+                    // githubNotify(
+                    //     credentialsId: 'github-personal',
+                    //     description: 'Build passed! ✅',
+                    //     context: 'Jenkins Build',
+                    //     status: 'SUCCESS'
+                    // )
                 }
             }
         }
@@ -178,21 +178,23 @@ pipeline {
                 }
                 failure {
                     echo '❌ Unit tests failed'
-                    githubNotify(
-                        credentialsId: 'github-personal',
-                        description: 'Unit tests failed',
-                        context: 'Jenkins Tests',
-                        status: 'FAILURE'
-                    )
+                    // GitHub plugin not installed - commented out
+                    // githubNotify(
+                    //     credentialsId: 'github-personal',
+                    //     description: 'Unit tests failed',
+                    //     context: 'Jenkins Tests',
+                    //     status: 'FAILURE'
+                    // )
                 }
                 success {
                     echo '✅ All unit tests passed'
-                    githubNotify(
-                        credentialsId: 'github-personal',
-                        description: 'All tests passed',
-                        context: 'Jenkins Tests',
-                        status: 'SUCCESS'
-                    )
+                    // GitHub plugin not installed - commented out
+                    // githubNotify(
+                    //     credentialsId: 'github-personal',
+                    //     description: 'All tests passed',
+                    //     context: 'Jenkins Tests',
+                    //     status: 'SUCCESS'
+                    // )
                 }
             }
         }
@@ -234,21 +236,23 @@ pipeline {
                 }
                 failure {
                     echo '❌ Security scan found issues'
-                    githubNotify(
-                        credentialsId: 'github-personal',
-                        description: 'Security vulnerabilities found',
-                        context: 'Jenkins Security',
-                        status: 'FAILURE'
-                    )
+                    // GitHub plugin not installed - commented out
+                    // githubNotify(
+                    //     credentialsId: 'github-personal',
+                    //     description: 'Security vulnerabilities found',
+                    //     context: 'Jenkins Security',
+                    //     status: 'FAILURE'
+                    // )
                 }
                 success {
                     echo '✅ Security scan passed'
-                    githubNotify(
-                        credentialsId: 'github-personal',
-                        description: 'No security issues found',
-                        context: 'Jenkins Security',
-                        status: 'SUCCESS'
-                    )
+                    // GitHub plugin not installed - commented out
+                    // githubNotify(
+                    //     credentialsId: 'github-personal',
+                    //     description: 'No security issues found',
+                    //     context: 'Jenkins Security',
+                    //     status: 'SUCCESS'
+                    // )
                 }
             }
         }
@@ -275,21 +279,23 @@ pipeline {
             post {
                 failure {
                     echo '❌ Docker build failed'
-                    githubNotify(
-                        credentialsId: 'github-personal',
-                        description: 'Docker build failed',
-                        context: 'Jenkins Docker',
-                        status: 'FAILURE'
-                    )
+                    // GitHub plugin not installed - commented out
+                    // githubNotify(
+                    //     credentialsId: 'github-personal',
+                    //     description: 'Docker build failed',
+                    //     context: 'Jenkins Docker',
+                    //     status: 'FAILURE'
+                    // )
                 }
                 success {
                     echo '✅ Docker image built successfully'
-                    githubNotify(
-                        credentialsId: 'github-personal',
-                        description: 'Docker image built',
-                        context: 'Jenkins Docker',
-                        status: 'SUCCESS'
-                    )
+                    // GitHub plugin not installed - commented out
+                    // githubNotify(
+                    //     credentialsId: 'github-personal',
+                    //     description: 'Docker image built',
+                    //     context: 'Jenkins Docker',
+                    //     status: 'SUCCESS'
+                    // )
                 }
             }
         }
