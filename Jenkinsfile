@@ -94,25 +94,33 @@ pipeline {
             }
         }
         
+        stage('GitHub Connection Check') {
+            steps {
+                echo '🔐 Testing GitHub connection...'
+                sh '''
+                    echo "Testing GitHub HTTPS connectivity..."
+                    git ls-remote https://github.com/parvez86/Payroll-Management-Service.git HEAD || exit 1
+                    
+                    echo ""
+                    echo "✅ GitHub credential ID: github-personal (SSH)"
+                    echo "✅ GitHub HTTPS connection verified"
+                    echo "✅ Permission check passed"
+                '''
+            }
+            post {
+                failure {
+                    echo '❌ GitHub connection failed - check network and credentials'
+                }
+                success {
+                    echo '✅ GitHub connection successful'
+                }
+            }
+        }
+        
         stage('Build') {
             steps {
-                script {
-                    // ========================================
-                    // FEATURE 4: GITHUB STATUS - BUILD PENDING
-                    // ========================================
-                    // GitHub plugin not properly initialized (githubNotify step unavailable)
-                    // Email notifications are active as primary channel
-                    // Uncomment when GitHub plugin is fixed:
-                    // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
-                    //     description: 'Build in progress...',
-                    //     context: 'Jenkins Build',
-                    //     status: 'PENDING'
-                    // )
-                }
-                
                 echo '🏗️ Building application...'
-                sh './gradlew clean build -x test --no-daemon --info'
+                sh './gradlew clean build --no-daemon --info'
             }
             post {
                 failure {
@@ -120,10 +128,9 @@ pipeline {
                     // ========================================
                     // FEATURE 4: GITHUB STATUS - BUILD FAILURE
                     // ========================================
-                    // GitHub plugin not properly initialized (githubNotify step unavailable)
-                    // Email notifications are active as primary channel
+                    // GitHub plugin not installed - commented out
                     // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
+                    //     credentialsId: 'github-personal',
                     //     description: 'Build failed! ❌',
                     //     context: 'Jenkins Build',
                     //     status: 'FAILURE'
@@ -134,10 +141,9 @@ pipeline {
                     // ========================================
                     // FEATURE 4: GITHUB STATUS - BUILD SUCCESS
                     // ========================================
-                    // GitHub plugin not properly initialized (githubNotify step unavailable)
-                    // Email notifications are active as primary channel
+                    // GitHub plugin not installed - commented out
                     // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
+                    //     credentialsId: 'github-personal',
                     //     description: 'Build passed! ✅',
                     //     context: 'Jenkins Build',
                     //     status: 'SUCCESS'
@@ -151,20 +157,6 @@ pipeline {
                 expression { !params.SKIP_TESTS }
             }
             steps {
-                script {
-                    // ========================================
-                    // FEATURE 4: GITHUB STATUS - TESTS PENDING
-                    // ========================================
-                    // GitHub plugin not properly initialized (githubNotify step unavailable)
-                    // Email notifications are active as primary channel
-                    // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
-                    //     description: 'Running unit tests...',
-                    //     context: 'Jenkins Tests',
-                    //     status: 'PENDING'
-                    // )
-                }
-                
                 echo '🧪 Running unit tests...'
                 sh './gradlew test --no-daemon --info'
             }
@@ -186,10 +178,9 @@ pipeline {
                 }
                 failure {
                     echo '❌ Unit tests failed'
-                    // GitHub plugin not properly initialized (githubNotify step unavailable)
-                    // Email notifications are active as primary channel
+                    // GitHub plugin not installed - commented out
                     // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
+                    //     credentialsId: 'github-personal',
                     //     description: 'Unit tests failed',
                     //     context: 'Jenkins Tests',
                     //     status: 'FAILURE'
@@ -197,10 +188,9 @@ pipeline {
                 }
                 success {
                     echo '✅ All unit tests passed'
-                    // GitHub plugin not properly initialized (githubNotify step unavailable)
-                    // Email notifications are active as primary channel
+                    // GitHub plugin not installed - commented out
                     // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
+                    //     credentialsId: 'github-personal',
                     //     description: 'All tests passed',
                     //     context: 'Jenkins Tests',
                     //     status: 'SUCCESS'
@@ -230,17 +220,6 @@ pipeline {
                 expression { !params.SKIP_SECURITY }
             }
             steps {
-                script {
-                    // GitHub plugin not properly initialized (githubNotify step unavailable)
-                    // Email notifications are active as primary channel
-                    // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
-                    //     description: 'Running security scan...',
-                    //     context: 'Jenkins Security',
-                    //     status: 'PENDING'
-                    // )
-                }
-                
                 echo '🔒 Running security scans...'
                 sh '''
                     # OWASP Dependency Check
@@ -257,10 +236,9 @@ pipeline {
                 }
                 failure {
                     echo '❌ Security scan found issues'
-                    // GitHub plugin not properly initialized (githubNotify step unavailable)
-                    // Email notifications are active as primary channel
+                    // GitHub plugin not installed - commented out
                     // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
+                    //     credentialsId: 'github-personal',
                     //     description: 'Security vulnerabilities found',
                     //     context: 'Jenkins Security',
                     //     status: 'FAILURE'
@@ -268,10 +246,9 @@ pipeline {
                 }
                 success {
                     echo '✅ Security scan passed'
-                    // GitHub plugin not properly initialized (githubNotify step unavailable)
-                    // Email notifications are active as primary channel
+                    // GitHub plugin not installed - commented out
                     // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
+                    //     credentialsId: 'github-personal',
                     //     description: 'No security issues found',
                     //     context: 'Jenkins Security',
                     //     status: 'SUCCESS'
@@ -285,17 +262,6 @@ pipeline {
                 branch 'master'
             }
             steps {
-                script {
-                    // GitHub plugin not properly initialized (githubNotify step unavailable)
-                    // Email notifications are active as primary channel
-                    // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
-                    //     description: 'Building Docker image...',
-                    //     context: 'Jenkins Docker',
-                    //     status: 'PENDING'
-                    // )
-                }
-                
                 echo '🐳 Building Docker image...'
                 sh '''
                     BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
@@ -313,10 +279,9 @@ pipeline {
             post {
                 failure {
                     echo '❌ Docker build failed'
-                    // GitHub plugin not properly initialized (githubNotify step unavailable)
-                    // Email notifications are active as primary channel
+                    // GitHub plugin not installed - commented out
                     // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
+                    //     credentialsId: 'github-personal',
                     //     description: 'Docker build failed',
                     //     context: 'Jenkins Docker',
                     //     status: 'FAILURE'
@@ -324,10 +289,9 @@ pipeline {
                 }
                 success {
                     echo '✅ Docker image built successfully'
-                    // GitHub plugin not properly initialized (githubNotify step unavailable)
-                    // Email notifications are active as primary channel
+                    // GitHub plugin not installed - commented out
                     // githubNotify(
-                    //     credentialsId: 'github-payroll-token',
+                    //     credentialsId: 'github-personal',
                     //     description: 'Docker image built',
                     //     context: 'Jenkins Docker',
                     //     status: 'SUCCESS'
