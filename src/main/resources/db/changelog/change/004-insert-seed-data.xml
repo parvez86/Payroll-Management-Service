@@ -8,7 +8,7 @@
          http://www.liquibase.org/xml/ns/dbchangelog-ext
          http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
 
-    <changeSet id="015-insert-banks-data" author="payroll-service">
+    <changeSet id="004-001-insert-banks-data" author="payroll-service">
         <comment>Insert initial bank data for development environment</comment>
 
         <insert tableName="banks">
@@ -39,7 +39,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="016-insert-branches-data" author="payroll-service">
+    <changeSet id="004-002-insert-branches-data" author="payroll-service">
         <comment>Insert initial branch data for development environment</comment>
 
         <insert tableName="branch">
@@ -70,7 +70,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="017-insert-salary-formula-data" author="payroll-service">
+    <changeSet id="004-003-insert-salary-formula-data" author="payroll-service">
         <comment>Insert initial salary distribution formula for development environment</comment>
 
         <insert tableName="salary_distribution_formulas">
@@ -89,7 +89,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="018-insert-company-account-data" author="payroll-service">
+    <changeSet id="004-004-insert-company-account-data" author="payroll-service">
         <comment>Insert company main account for payroll operations (before company creation)</comment>
 
         <insert tableName="accounts">
@@ -111,7 +111,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="019-insert-grades-data" author="payroll-service" dbms="postgresql">
+    <changeSet id="004-005-insert-grades-data" author="payroll-service" dbms="postgresql">
         <comment>Insert grades with hierarchy (1,1,2,2,2,2 distribution) using native SQL for parent_id tracking. FIX: splitStatements=false</comment>
 
         <sql splitStatements="false" stripComments="true">
@@ -161,14 +161,15 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="020-insert-admin-user-data" author="payroll-service">
-        <comment>Insert admin user for system administration</comment>
+    <changeSet id="004-006-insert-admin-user-data" author="payroll-service">
+        <comment>Insert admin user for system administration. Password: admin123 (hashed with BCrypt cost 12)</comment>
 
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="admin"/>
-            <column name="email" value="admin@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$DStt8gfwgRjiVKbE0s9yQuZJH3xyp0bjc6nW.HHyqolXQQMwHNXW."/>
+            <column name="email" value="admin@pms.com"/>
+            <!-- Password: admin123 (BCrypt cost 12) -->
+            <column name="password_hash" value="$2a$12$W03o/Ixsd.fqxJ8f5VOrfOMeRMiXAfccv1.VR71zIlJuXCTFtvlRK"/>
             <column name="role" value="ADMIN"/>
         </insert>
 
@@ -181,7 +182,7 @@
 
     <!-- employer user seeding reverted per request -->
 
-    <changeSet id="021-insert-company-data" author="payroll-service">
+    <changeSet id="004-007-insert-company-data" author="payroll-service">
         <comment>Insert initial company data for development environment</comment>
 
         <insert tableName="companies">
@@ -199,7 +200,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="021-update-company-account-owner" author="payroll-service">
+    <changeSet id="004-008-update-company-account-owner" author="payroll-service">
         <comment>Update company account owner_id to reference the created company</comment>
 
         <update tableName="accounts">
@@ -215,14 +216,14 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="022-insert-employee-users-data" author="payroll-service">
+    <changeSet id="004-009-insert-employee-users-data" author="payroll-service">
         <comment>Insert employee users (10 employees as per SRS requirement: 1,1,2,2,2,2 distribution)</comment>
 
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="director001"/>
             <column name="email" value="director@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$vn5hv7GLTylKCy3FGJHYlebS3ex618q3QkvuJkL/ameW5MXmsbIO2"/>
+            <column name="password_hash" value="$2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS"/>
             <column name="role" value="EMPLOYER"/>
         </insert>
 
@@ -230,7 +231,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="manager001"/>
             <column name="email" value="manager@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$pRu2rXoQZvFU7yawAwRCweQSHCmca1V.hU.5UHmVHS4jyQ2lCiQPW"/>
+            <column name="password_hash" value="$2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS"/>
             <column name="role" value="EMPLOYER"/>
         </insert>
 
@@ -238,7 +239,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="senior001"/>
             <column name="email" value="senior001@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$lsCxB.08QCLZ9ExLIqk04eOwQvxdwqmI8ZJM.0OiRV4xxsaOjusIi"/>
+            <column name="password_hash" value="$2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
 
@@ -246,7 +247,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="senior002"/>
             <column name="email" value="senior002@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$tGVfnO.zQfjvaFmagVXvV..DpbevDiVZjbnlpYq2F83Cr2/Vlw4Ke"/>
+            <column name="password_hash" value="$2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
 
@@ -254,7 +255,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="dev001"/>
             <column name="email" value="dev001@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$OLR22Kjr6PHVtIrlS7wLAef.5omCgDvw6U7QLQ.wtFx5rr4zWp9gi"/>
+            <column name="password_hash" value="$2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
 
@@ -262,7 +263,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="dev002"/>
             <column name="email" value="dev002@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$vf4722OFHIUFprTDqBKqge1NJny7iqHewYYCFCbSjw23rH0dQUnn6"/>
+            <column name="password_hash" value="$2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
 
@@ -270,7 +271,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="junior001"/>
             <column name="email" value="junior001@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$TdembWUUDFtvnYADZA0qIOGWDKFS4P7eZzQTMyJAHl/53BGLalrPK"/>
+            <column name="password_hash" value="$2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
 
@@ -278,7 +279,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="junior002"/>
             <column name="email" value="junior002@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$gkayhwIO1Ie6Ie9LJI0e7.SbzU67JuFrLbspkfwb5Of1bOYzT/gMu"/>
+            <column name="password_hash" value="$2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
 
@@ -286,7 +287,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="intern001"/>
             <column name="email" value="intern001@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$J6fvKFCRPTCRsMvQ.xxMxuXGq2FNlReBeYnGN6AM2SJPrhGDRAvsq"/>
+            <column name="password_hash" value="$2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
 
@@ -294,7 +295,7 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="intern002"/>
             <column name="email" value="intern002@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$xgLPtmtGh8wFmQdUHzxKzO1jjO2eJfXcIb71GYhQ0XYLGeTNmwRjq"/>
+            <column name="password_hash" value="$2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS"/>
             <column name="role" value="EMPLOYEE"/>
         </insert>
 
@@ -305,7 +306,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="023-insert-employee-accounts-data" author="payroll-service">
+    <changeSet id="004-010-insert-employee-accounts-data" author="payroll-service">
         <comment>Insert employee accounts for salary transfers</comment>
 
         <insert tableName="accounts">
@@ -435,7 +436,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="024-insert-employee-records-data" author="payroll-service">
+    <changeSet id="004-011-insert-employee-records-data" author="payroll-service">
         <comment>Insert employee records linking users to accounts and grades (10 employees: 1,1,2,2,2,2 distribution) and update mobile numbers with +880 prefix.</comment>
 
         <insert tableName="employees">

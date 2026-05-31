@@ -3,7 +3,7 @@
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd"> <changeSet id="009-create-employees-table" author="payroll-service">
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd"> <changeSet id="002-001-create-employees-table" author="payroll-service">
         <comment>Create employees table for employee management</comment>
         <createTable tableName="employees">
             <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
@@ -105,7 +105,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="010-create-payroll-batches-table" author="payroll-service">
+    <changeSet id="002-002-create-payroll-batches-table" author="payroll-service">
         <comment>Create payroll_batches table for managing salary processing batches</comment>
         
         <createTable tableName="payroll_batches"> 
@@ -193,7 +193,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="011-create-payroll-items-table" author="payroll-service">
+    <changeSet id="002-003-create-payroll-items-table" author="payroll-service">
         <comment>Create payroll_items table for individual employee salary items in batches</comment>
         
         <createTable tableName="payroll_items"> 
@@ -276,7 +276,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="012-create-token-info-table" author="payroll-service">
+    <changeSet id="002-004-create-token-info-table" author="payroll-service">
         <comment>Create token_info table for JWT token lifecycle management</comment>
         
         <createTable tableName="token_info">
@@ -352,7 +352,7 @@
         </rollback>
     </changeSet>
 
-    <changeSet id="013-create-transactions-table" author="payroll-service">
+    <changeSet id="002-005-create-transactions-table" author="payroll-service">
         <comment>Create transactions table for double-entry accounting</comment>
         
         <createTable tableName="transactions">

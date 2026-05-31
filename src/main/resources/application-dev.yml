@@ -5,6 +5,13 @@ spring:
     username: sa
     password: 
     driver-class-name: org.h2.Driver
+    hikari:
+      pool-name: PayrollDevHikariPool
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 60000
+      idle-timeout: 300000
+      max-lifetime: 900000
   
   # H2 Console for Development
   h2:
@@ -17,35 +24,71 @@ spring:
   # JPA Configuration for Development
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: validate # ✅ CORRECT: Let Liquibase handle schema creation
     properties:
       hibernate:
-        show_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
+        show_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        generate_statistics: false
     show-sql: true
+    open-in-view: false
   
   # Liquibase for Development
   liquibase:
     contexts: dev
     drop-first: true # Allow dropping tables in development
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    default-schema: public
+  
+  # JSON Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: Asia/Dhaka
 
 server:
   port: 20001
   servlet:
     context-path: /pms
+  error:
+    include-message: always
+    include-binding-errors: always
 
-# Development JWT Configuration
+# Application Configuration
 app:
+  # CORS Configuration for Frontend Integration
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:4200,http://localhost:5173,http://localhost:4173
+    allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS,HEAD
+    allowed-headers: "*"
+    allow-credentials: true
+    max-age: 3600
+  
   jwt:
+    header-prefix: "Bearer "
     secret: DevSecretKeyForPayrollSystemTesting2024
     expiration: 3600000 # 1 hour for development (access token)
     refresh-expiration: 86400000 # 1 day for development (refresh token)
+    issuer: PayrollManagementSystem
+  
+  payroll:
+    grade6-base-salary: 50000.00 # Grade 6 base salary in BDT
+    hra-percentage: 0.20 # 20% of basic
+    medical-percentage: 0.15 # 15% of basic
+    grade-increment: 5000.00 # Increment per grade level
 
 # Development Logging
 logging:
   level:
     org.sp.payroll_service: DEBUG
     org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.data: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     liquibase: DEBUG

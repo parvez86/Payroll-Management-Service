@@ -60,6 +60,12 @@ public final class ErrorCodes {
     public static final String USER_INVALID_EMAIL = "71002";
     public static final String USER_INVALID_PHONE = "71003";
 
+    // User Preference
+    public static final String USER_PREFERENCE_NOT_FOUND = "70011";
+    public static final String USER_PREFERENCE_ALREADY_EXISTS = "70012";
+    public static final String USER_PREFERENCE_INACTIVE = "70013";
+    public static final String USER_PREFERENCE_LOCKED = "70014";
+
     // payroll management
     public static final String PAYROLL_INSUFFICIENT_FUND = "81001";
     public static final String PAYROLL_PROCESS_ERROR = "81002";

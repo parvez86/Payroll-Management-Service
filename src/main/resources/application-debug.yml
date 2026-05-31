@@ -1,5 +1,9 @@
-# Debug Profile Configuration for Docker
-# This extends the docker profile with debug-specific settings
+# Debug Profile Configuration
+# This profile extends the docker profile: spring.profiles.active=docker,debug
+# It overrides specific settings for enhanced debugging capabilities
+# Inherits from: application-docker.yml
+# Inherits datasource, JPA dialect, Liquibase, and server config from docker profile
+
 spring:
   # Enhanced Logging for Debug
   jpa:

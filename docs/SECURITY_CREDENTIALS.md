@@ -193,9 +193,9 @@ docker exec -it payroll_service-postgres-1 psql -U payroll_user -d payroll_db
 ```
 
 ### Reset Admin Password
-SQL command to reset admin password to `newpassword123`:
+SQL command to reset admin password to `admin123`:
 ```sql
-UPDATE users SET password_hash = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqyPw5w2cBpwpL4gUzV7Uy6' WHERE username = 'admin';
+UPDATE users SET password_hash = '$2a$12$W03o/Ixsd.fqxJ8f5VOrfOMeRMiXAfccv1.VR71zIlJuXCTFtvlRK' WHERE username = 'admin';
 ```
 
 ---

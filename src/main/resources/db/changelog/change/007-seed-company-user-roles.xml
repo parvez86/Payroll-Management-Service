@@ -3,38 +3,19 @@
         xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
 
     <changeSet id="007-seed-company-user-roles" author="system">
-        <comment>Seed EMPLOYER role assignment for admin user (idempotent, safe if already exists)</comment>
+        <comment>Seed EMPLOYER role assignment for employer users (ADMIN has global scope, not company-scoped)</comment>
         
-        <!-- Use SQL with WHERE NOT EXISTS for complete idempotency -->
-        <sql>
-            INSERT INTO company_user_roles (id, company_id, user_id, role_on_company, access_scope, active, status, version, created_at)
-            SELECT 
-                gen_random_uuid(),
-                (SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1),
-                (SELECT id FROM users WHERE username = 'admin' LIMIT 1),
-                'EMPLOYER',
-                'FULL',
-                true,
-                'ACTIVE',
-                0,
-                CURRENT_TIMESTAMP
-            WHERE NOT EXISTS (
-                SELECT 1 FROM company_user_roles 
-                WHERE user_id = (SELECT id FROM users WHERE username = 'admin' LIMIT 1)
-                AND company_id = (SELECT id FROM companies WHERE name = 'TechCorp Bangladesh Ltd' LIMIT 1)
-                AND role_on_company = 'EMPLOYER'
-            )
-            AND EXISTS (SELECT 1 FROM users WHERE username = 'admin')
-            AND EXISTS (SELECT 1 FROM companies WHERE name = 'TechCorp Bangladesh Ltd');
-        </sql>
+        <!-- NOTE: ADMIN user should NOT have company-scoped roles. ADMIN has GLOBAL scope by design.
+             Company roles are only for EMPLOYER and EMPLOYEE users. -->
+        
+        <!-- This changeset is empty by design - ADMIN role requires no company assignment -->
+        <empty/>
 
         <rollback>
-            <delete tableName="company_user_roles">
-                <where>role_on_company='EMPLOYER' AND user_id=(SELECT id FROM users WHERE username='admin')</where>
-            </delete>
+            <empty/>
         </rollback>
     </changeSet>
 

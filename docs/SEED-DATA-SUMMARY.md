@@ -3,8 +3,8 @@
 **Date:** 2025-12-01  
 **Total Users:** 35 (1 Admin + 3 Employers + 31 Employees)  
 **Total Companies:** 3  
-**Password for all users:** `password123`  
-**BCrypt Hash:** `$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY.QCJ7R9f7NzGK`
+**Password - Admin:** `admin123` → Hash: `$2a$12$W03o/Ixsd.fqxJ8f5VOrfOMeRMiXAfccv1.VR71zIlJuXCTFtvlRK`  
+**Password - Others:** `password123` → Hash: `$2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS`
 
 ---
 

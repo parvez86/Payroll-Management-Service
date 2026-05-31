@@ -6,25 +6,34 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
 
     <!--
-        COMPREHENSIVE SEED DATA: 35 Users Total
-        - 1 ADMIN
+        COMPREHENSIVE SEED DATA: Test User Credentials
+        
+        Total Users: 35
+        - 1 ADMIN (admin)
         - 3 EMPLOYERS (one per company)
-        - 31 EMPLOYEES distributed across 3 companies
+        - 31 EMPLOYEES (distributed across 3 companies)
 
-        Distribution per company (approximately equal):
-        - TechCorp Bangladesh Ltd: 11 employees (existing data)
+        Authentication Configuration:
+        - Algorithm: BCrypt
+        - Cost Factor: 12
+        - Config: SecurityConfig.java - new BCryptPasswordEncoder(12)
+
+        Standardized Password: "password123"
+        BCrypt Hash (Cost 12): $2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS
+        
+        Distribution per company:
+        - TechCorp Bangladesh Ltd: 11 employees
         - InnovateBD Solutions: 10 employees
         - Digital Bangladesh Corp: 10 employees
 
-        All passwords: "password123" hashed with BCrypt
-        Password hash: $2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY.QCJ7R9f7NzGK
+        For password verification, use Spring Security's PasswordEncoder.matches()
     -->
 
     <!-- =========================================== -->
     <!-- STEP 1: Create Additional Companies (2 new) -->
     <!-- =========================================== -->
 
-    <changeSet id="025-insert-additional-companies" author="payroll-seed">
+    <changeSet id="008-001-insert-additional-companies" author="payroll-seed">
         <comment>Create 2 additional companies for multi-company testing</comment>
 
         <!-- Company 2: InnovateBD Solutions -->
@@ -93,15 +102,16 @@
     <!-- STEP 2: Create 3 EMPLOYER Users -->
     <!-- =========================================== -->
 
-    <changeSet id="026-insert-employer-users" author="payroll-seed">
-        <comment>Create 3 employer users (one per company)</comment>
+    <changeSet id="008-002-insert-employer-users" author="payroll-seed">
+        <comment>Create 3 employer users (one per company). All use password: password123 (BCrypt cost 12)</comment>
 
         <!-- Employer 1: TechCorp -->
         <insert tableName="users">
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="employer_techcorp"/>
             <column name="email" value="employer@techcorp.com"/>
-            <column name="password_hash" value="$2a$12$n4o10G8i3RqzEGmrjCsO0OFnqUsXKw8YU0nz8cfTIL6kuZqoWg8hO"/>
+            <!-- Password: password123 (BCrypt cost 12) -->
+            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY.QCJ7R9f7NzGK"/>
             <column name="role" value="EMPLOYER"/>
         </insert>
 
@@ -110,7 +120,8 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="employer_innovate"/>
             <column name="email" value="employer@innovatebd.com"/>
-            <column name="password_hash" value="$2a$12$bF/lC1pYaPOK8aqbjsUZp.pSD/32XKdJb6co4KmKfXpUGPrYEAt2y"/>
+            <!-- Password: password123 (BCrypt cost 12) -->
+            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY.QCJ7R9f7NzGK"/>
             <column name="role" value="EMPLOYER"/>
         </insert>
 
@@ -119,7 +130,8 @@
             <column name="id" valueComputed="gen_random_uuid()"/>
             <column name="username" value="employer_digitalbd"/>
             <column name="email" value="employer@digitalbd.gov.bd"/>
-            <column name="password_hash" value="$2a$12$niVXI.Yu3Elubxx1HNqEyuWLcdomHJGXSRgum6MOVZas6Ez6o5lAK"/>
+            <!-- Password: password123 (BCrypt cost 12) -->
+            <column name="password_hash" value="$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY.QCJ7R9f7NzGK"/>
             <column name="role" value="EMPLOYER"/>
         </insert>
 
@@ -135,7 +147,7 @@
     <!-- (10 for InnovateBD + 10 for DigitalBD) -->
     <!-- =========================================== -->
 
-    <changeSet id="027-insert-additional-employee-users" author="payroll-seed">
+    <changeSet id="008-003-insert-additional-employee-users" author="payroll-seed">
         <comment>Create 20 additional employee users for companies 2 and 3</comment>
 
         <!-- InnovateBD Employees (10) -->
@@ -311,7 +323,7 @@
     <!-- STEP 4: Create Accounts for New Employees -->
     <!-- =========================================== -->
 
-    <changeSet id="028-insert-additional-employee-accounts" author="payroll-seed">
+    <changeSet id="008-004-insert-additional-employee-accounts" author="payroll-seed">
         <comment>Create bank accounts for 20 additional employees</comment>
 
         <!-- InnovateBD Employee Accounts (10) -->
@@ -568,7 +580,7 @@
     <!-- Distribution: 1,1,2,2,2,2 per company -->
     <!-- =========================================== -->
 
-    <changeSet id="029-insert-additional-employee-records" author="payroll-seed">
+    <changeSet id="008-005-insert-additional-employee-records" author="payroll-seed">
         <comment>Create employee records for 20 additional employees (10 per company)</comment>
 
         <!-- InnovateBD Employees (10): 1,1,2,2,2,2 distribution -->
@@ -824,7 +836,7 @@
     <!-- STEP 6: Assign Company-User Roles -->
     <!-- =========================================== -->
 
-    <changeSet id="030-seed-employer-company-roles" author="payroll-seed">
+    <changeSet id="008-006-seed-employer-company-roles" author="payroll-seed">
         <comment>Assign EMPLOYER roles to employer users for their respective companies</comment>
 
         <!-- TechCorp Employer -->

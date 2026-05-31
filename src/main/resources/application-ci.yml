@@ -24,7 +24,7 @@ spring:
   # JPA Configuration - CI optimized
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: validate # ✅ CORRECT: Let Liquibase handle schema creation
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -52,6 +52,29 @@ logging:
     org.springframework.security: WARN
     org.hibernate: WARN
     liquibase: INFO
+
+# Application Configuration
+app:
+  # CORS Configuration for Frontend Integration
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:4200,http://localhost:5173,http://localhost:4173
+    allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS,HEAD
+    allowed-headers: "*"
+    allow-credentials: true
+    max-age: 3600
+  
+  jwt:
+    header-prefix: "Bearer "
+    secret: ${JWT_SECRET:CISecretKeyForPayrollSystemTesting2024}
+    expiration: 86400000 # 24 hours in milliseconds (access token)
+    refresh-expiration: 604800000 # 7 days in milliseconds (refresh token)
+    issuer: PayrollManagementSystem
+  
+  payroll:
+    grade6-base-salary: 50000.00 # Grade 6 base salary in BDT
+    hra-percentage: 0.20 # 20% of basic
+    medical-percentage: 0.15 # 15% of basic
+    grade-increment: 5000.00 # Increment per grade level
 
 # Management Configuration
 management:

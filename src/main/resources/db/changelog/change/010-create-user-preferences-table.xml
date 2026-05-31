@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd">
+
+    <changeSet id="010-create-user-preferences-table" author="system">
+        <comment>Create user_preferences table for UI customization (scope, theme, language)</comment>
+        
+        <createTable tableName="user_preferences">
+            <!-- PRIMARY KEY: id (from BaseEntity pattern) -->
+            <column name="id" type="UUID" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- FOREIGN KEY: user_id (UNIQUE 1-to-1 relationship to User) -->
+            <column name="user_id" type="UUID">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="selected_scope" type="VARCHAR(20)" defaultValue="COMPANY">
+                <constraints nullable="false"/>
+            </column>
+            <column name="selected_company_id" type="UUID">
+                <constraints nullable="true"/>
+            </column>
+            <column name="theme" type="VARCHAR(20)" defaultValue="LIGHT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="language" type="VARCHAR(10)" defaultValue="en">
+                <constraints nullable="false"/>
+            </column>
+            <!-- AUDIT FIELDS (from BaseAuditingEntity, inherited from BaseEntity) -->
+            <column name="version" type="BIGINT" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="UUID"/>
+            <column name="updated_at" type="TIMESTAMP"/>
+            <column name="updated_by" type="UUID"/>
+        </createTable>
+        
+        <!-- FOREIGN KEY: user_id references users(id) with CASCADE delete -->
+        <addForeignKeyConstraint
+                baseTableName="user_preferences"
+                baseColumnNames="user_id"
+                constraintName="fk_user_prefs_user"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+        
+        <!-- FOREIGN KEY: selected_company_id references companies(id) -->
+        <addForeignKeyConstraint
+                baseTableName="user_preferences"
+                baseColumnNames="selected_company_id"
+                constraintName="fk_user_prefs_company"
+                referencedTableName="companies"
+                referencedColumnNames="id"
+                onDelete="SET NULL"/>
+        
+        <!-- CHECK CONSTRAINT: scope must be GLOBAL or COMPANY -->
+        <sql>ALTER TABLE user_preferences ADD CONSTRAINT chk_scope_valid
+            CHECK (selected_scope IN ('GLOBAL', 'COMPANY'))</sql>
+        
+        <!-- CHECK CONSTRAINT: scope-company consistency -->
+        <sql>ALTER TABLE user_preferences ADD CONSTRAINT chk_scope_company_consistency
+            CHECK (
+                (selected_scope = 'GLOBAL' AND selected_company_id IS NULL) OR
+                (selected_scope = 'COMPANY' AND selected_company_id IS NOT NULL)
+            )</sql>
+        
+        <!-- INDEXES for query performance -->
+        <createIndex indexName="idx_user_preferences_user" tableName="user_preferences">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex indexName="idx_user_preferences_company" tableName="user_preferences">
+            <column name="selected_company_id"/>
+        </createIndex>
+        <createIndex indexName="idx_user_preferences_scope" tableName="user_preferences">
+            <column name="selected_scope"/>
+        </createIndex>
+        
+        <!-- SEED: Create default preferences for all existing users -->
+        <sql>
+            INSERT INTO user_preferences 
+            (id, user_id, selected_scope, selected_company_id, theme, language, status, version, created_at, created_by, updated_at)
+            SELECT 
+                gen_random_uuid() as id,
+                u.id as user_id,
+                CASE WHEN u.role = 'ADMIN' THEN 'GLOBAL' ELSE 'COMPANY' END as selected_scope,
+                CASE WHEN u.role = 'ADMIN' THEN NULL ELSE (SELECT c.id FROM companies c ORDER BY created_at ASC LIMIT 1) END as selected_company_id,
+                'LIGHT' as theme,
+                'en' as language,
+                'ACTIVE' as status,
+                0 as version,
+                CURRENT_TIMESTAMP as created_at,
+                u.id as created_by,
+                CURRENT_TIMESTAMP as updated_at
+            FROM users u
+            WHERE NOT EXISTS (SELECT 1 FROM user_preferences WHERE user_id = u.id);
+        </sql>
+        
+        <rollback>
+            <dropTable tableName="user_preferences"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

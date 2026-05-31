@@ -4,6 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.sp.payroll_service.api.auth.dto.*;
 import org.sp.payroll_service.api.wallet.dto.AccountResponse;
 import org.sp.payroll_service.domain.auth.entity.User;
+import org.sp.payroll_service.domain.auth.entity.UserPreferences;
+import org.sp.payroll_service.domain.auth.service.UserPreferenceService;
 import org.sp.payroll_service.domain.auth.service.UserService;
 import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.exception.DuplicateEntryException;
@@ -51,6 +53,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
     private final EmployeeRepository employeeRepository;
     private final CompanyUserRoleRepository companyUserRoleRepository;
     private final CompanyRepository companyRepository;
+    private final UserPreferenceService userPreferenceService;
 
     /**
      * Constructs the UserServiceImpl.
@@ -60,14 +63,16 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
      *
      * @param userRepository  The JPA repository for User entities.
      * @param passwordEncoder The Spring Security password encoder for hashing.
+     * @param userPreferenceService The service for managing user preferences
      */
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, EmployeeRepository employeeRepository, CompanyUserRoleRepository companyUserRoleRepository, CompanyRepository companyRepository) {
+    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, EmployeeRepository employeeRepository, CompanyUserRoleRepository companyUserRoleRepository, CompanyRepository companyRepository, UserPreferenceService userPreferenceService) {
         super(userRepository, "User");
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.employeeRepository = employeeRepository;
         this.companyUserRoleRepository = companyUserRoleRepository;
         this.companyRepository = companyRepository;
+        this.userPreferenceService = userPreferenceService;  // NEW
     }
 
     // --- Overrides for Creation and Update with Business Logic ---
@@ -90,7 +95,15 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
         if (userRepository.existsByEmail(request.email())) {
             throw DuplicateEntryException.forEntity("User", "email", request.email());
         }
-        return super.create(request, principal); // Delegates to abstract base class logic
+        
+        // Call parent create to save user
+        UserResponse created = super.create(request, principal);
+        
+        // NEW: Create default preferences for this user
+        userPreferenceService.createDefaultPreferences(created.id(), request.role());
+        log.info("Default preferences created for new user: {}", created.id());
+        
+        return created;
     }
 
     /**
@@ -234,6 +247,17 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
             
             log.debug("Successfully retrieved user details for: {} with {} companies", user.getUsername(), companyMap != null ? companyMap.size() : 0);
             
+            // Get or create user preferences
+            UserPreferencesResponse preferencesResponse;
+            try {
+                preferencesResponse = userPreferenceService.getUserPreferenceByUserId(user.getId())
+                        .orElseThrow(() -> new ResourceNotFoundException(ErrorCodes.USER_PREFERENCE_NOT_FOUND));
+            } catch (Exception e) {
+                // If preferences don't exist, create default ones
+                log.info("Creating default preferences for user: {}", user.getUsername());
+                preferencesResponse = userPreferenceService.createDefaultPreferences(user.getId(), user.getRole());
+            }
+            
             return new UserDetailsResponse(
                     userResponse,
                     accountResponse,
@@ -241,7 +265,8 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
                     description,
                     companyId,
                     companyMap,
-                    bizId
+                    bizId,
+                    preferencesResponse
             );
             
         } catch (Exception e) {

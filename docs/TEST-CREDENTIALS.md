@@ -1,16 +1,22 @@
 # Test User Credentials - Payroll Management System
 
+## ✅ VERIFIED CREDENTIALS (Updated May 31, 2026)
+
+**Authentication:** BCrypt (Cost 12) - Spring Security  
+**Admin Password:** `admin123`  
+**All Other Users:** `password123`
+
 ## ADMIN Role (1 user)
 | Username | Password | Role | Description |
 |----------|----------|------|-------------|
-| admin | password123 | ADMIN | System administrator with global access |
+| admin | admin123 | ADMIN | System administrator with global access |
 
 ## EMPLOYER Role (3 users)
 | Username | Password | Role | Company | Description |
 |----------|----------|------|---------|-------------|
-| employer_techcorp | employer_techcorp123 | EMPLOYER | TechCorp Bangladesh Ltd | CEO of TechCorp |
-| employer_innovate | employer_innovate123 | EMPLOYER | InnovateBD Solutions | CEO of InnovateBD |
-| employer_digitalbd | employer_digitalbd123 | EMPLOYER | DhakaBiz Dynamics | CEO of DhakaBiz |
+| employer_techcorp | password123 | EMPLOYER | TechCorp Bangladesh Ltd | CEO of TechCorp |
+| employer_innovate | password123 | EMPLOYER | InnovateBD Solutions | CEO of InnovateBD |
+| employer_digitalbd | password123 | EMPLOYER | Digital Bangladesh Corp | CEO of DigitalBD |
 
 ## EMPLOYEE Role (31 users)
 | Username | Password | Role | Company | Grade | Description |
@@ -27,22 +33,22 @@
 ### For Testing ADMIN Access:
 ```
 Username: admin
-Password: password123
+Password: admin123
 ```
 
-### For Testing EMPLOYER Access (Choose any 2):
+### For Testing EMPLOYER Access (Choose any):
 ```
 1) TechCorp CEO:
    Username: employer_techcorp
-   Password: employer_techcorp123
+   Password: password123
 
 2) InnovateBD CEO:
    Username: employer_innovate
-   Password: employer_innovate123
+   Password: password123
 
-3) DhakaBiz CEO:
+3) Digital Bangladesh CEO:
    Username: employer_digitalbd
-   Password: employer_digitalbd123
+   Password: password123
 ```
 
 ### For Testing EMPLOYEE Access (Choose any 2):
@@ -69,38 +75,33 @@ Password: password123
 ## All Users Summary
 
 ### Total: 35 Users
-- **1 ADMIN**: admin
-- **3 EMPLOYERS**:
+- **1 ADMIN**: admin (password: admin123)
+- **3 EMPLOYERS**: password123
   - employer_techcorp (TechCorp Bangladesh Ltd)
   - employer_innovate (InnovateBD Solutions)
-  - employer_digitalbd (DhakaBiz Dynamics) 
-- **31 EMPLOYEES**: Distributed across 3 companies
+  - employer_digitalbd (Digital Bangladesh Corp) 
+- **31 EMPLOYEES**: password123 (Distributed across 3 companies)
 
 ### Company Distribution:
-1. **TechCorp Bangladesh Ltd**: 15 employees (including existing 11 + new 4)
+1. **TechCorp Bangladesh Ltd**: 11 employees
 2. **InnovateBD Solutions**: 10 employees
-3. **DhakaBiz Dynamics**: 6 employees
+3. **Digital Bangladesh Corp**: 10 employees
 
 ---
 
-## Default Password Pattern
-- **ADMIN**: `password123`
-- **EMPLOYERS**: `<username>123` (e.g., employer_techcorp123)
-- **EMPLOYEES**: `password123`
+## Password Configuration
 
-This pattern provides:
-- Unique passwords for employer accounts (better security)
-- Simple passwords for employees (testing convenience)
-- In production, enforce strong unique passwords and mandatory password change on first login
+**ADMIN Password:** `admin123`  
+**BCrypt Hash:** `$2a$12$W03o/Ixsd.fqxJ8f5VOrfOMeRMiXAfccv1.VR71zIlJuXCTFtvlRK`
 
-## Security Note
-⚠️ **These are test credentials only**. In production:
-- Force password change on first login
-- Implement strong password policies
-- Enable MFA for ADMIN and EMPLOYER roles
-- Use password hashing (bcrypt with cost factor 12 minimum)
+**All Other Users Password:** `password123`  
+**BCrypt Hash:** `$2a$12$G41iuJ9./uwwOvAtPGlxVu1oxXLBeUHvblPiepVoCUUNbPxqpS5XS`
 
----
+In production, enforce:
+- Unique passwords per user
+- Strong password policies
+- Mandatory password change on first login
+- MFA for ADMIN and EMPLOYER roles
 
 ## API Login Endpoint
 ```
@@ -133,10 +134,10 @@ Response:
 - Cannot: Process payroll (read-only policy)
 
 ### Scenario 2: Employer Access  
-- Login as: `employer_techcorp / employer_techcorp123`
+- Login as: `employer_techcorp / password123`
 - Expected: View only TechCorp employees
 - Can: Create/process payroll for own company
-- Cannot: View other companies (InnovateBD, DhakaBiz)
+- Cannot: View other companies (InnovateBD, Digital Bangladesh)
 
 ### Scenario 3: Employee Access
 - Login as: `director001 / password123`

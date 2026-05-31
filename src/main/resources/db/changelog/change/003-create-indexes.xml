@@ -3,7 +3,7 @@
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd"> <changeSet id="014-create-performance-indexes" author="payroll-service">
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.25.xsd"> <changeSet id="003-001-create-performance-indexes" author="payroll-service">
         <comment>Create performance indexes for optimal query execution on core tables.</comment>
         
         <createIndex tableName="employees" indexName="idx_employee_grade">

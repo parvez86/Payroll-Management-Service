@@ -23,7 +23,7 @@ spring:
   # JPA Configuration
   jpa:
     hibernate:
-      ddl-auto: validate # Let Liquibase handle schema
+      ddl-auto: validate
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
