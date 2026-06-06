@@ -11,7 +11,7 @@ public record UserDetailsResponse(
         AccountResponse account,
         String fullName,
         String description,
-        UUID companyId,        // Primary/default company (for backward compatibility)
+//        UUID companyId,        // Primary/default company (for backward compatibility)
         Map<UUID, String> companyIds, // All companies user has access to (for employers/admins)
         String bizId,           // Employee code
         UserPreferencesResponse preferences  // User's UI preferences

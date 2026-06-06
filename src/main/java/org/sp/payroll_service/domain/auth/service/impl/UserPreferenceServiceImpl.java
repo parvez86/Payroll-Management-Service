@@ -77,7 +77,7 @@ public class UserPreferenceServiceImpl extends AbstractCrudService<
         log.debug("Mapping update request to UserPreferences entity for user: {}", entity.getId());
         
         // Validate user exists
-        User user = userRepository.findById(entity.getId())
+        User user = userRepository.findById(entity.getUser().getId())
             .orElseThrow(() -> ResourceNotFoundException.forEntity("User", entity.getId()));
         
         // Validate role-scope alignment
@@ -176,12 +176,12 @@ public class UserPreferenceServiceImpl extends AbstractCrudService<
         
         return this.mapToResponse(saved);
     }
-    
+
     @Override
     @Transactional(readOnly = true)
     public Optional<UUID> getPreferredCompanyId(UUID userId) {
         log.debug("Getting preferred company for user: {}", userId);
-        
+
         return userPreferencesRepository.findByUserId(userId)
             .map(prefs -> prefs.getSelectedCompany() != null ? prefs.getSelectedCompany().getId() : null);
     }
@@ -202,7 +202,14 @@ public class UserPreferenceServiceImpl extends AbstractCrudService<
             .map(UserPreferences::getSelectedScope)
             .orElse(PreferenceScope.COMPANY);
     }
-    
+
+    @Override
+    public UserPreferencesResponse updateUserPreferenceByUserId(UUID userId, UserPreferencesRequest request, HeaderResponse principal) {
+        UserPreferences userPreferences = userPreferencesRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCodes.USER_PREFERENCE_NOT_FOUND));
+        return this.update(userPreferences.getId(), request, principal);
+    }
+
     // --- HELPER METHODS ---
     
     /**

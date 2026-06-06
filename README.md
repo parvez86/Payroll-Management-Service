@@ -89,13 +89,13 @@ docker-compose down
 docker-compose up -d --build
 ```
 
-## 📚 Additional Resources
-|---------|-----|-------------|
-| **🔗 REST API** | http://localhost:20001/pms/api/v1 | See below |
-| **📚 Swagger UI** | http://localhost:20001/pms/api/v1/swagger-ui/index.html | - |
-| **❤️ Health Check** | http://localhost:20001/pms/api/v1/actuator/health | - |
-| **🗄️ PgAdmin** | http://localhost:5050 | admin@payroll.com / admin123 |
-| **🗄️ Database** | localhost:5432/payroll_db | payroll_user / payroll_pass |
+## 📚 Additional Resources 
+|---------------------|-----------------------------------------------------------|-------------------------------|  
+| **🔗 REST API**     | http://localhost:20001/pms/api/v1                         | See below                     |    
+| **📚 Swagger UI**   | http://localhost:20001/pms/api/v1/swagger-ui/index.html   | -                             |  
+| **❤️ Health Check** | http://localhost:20001/pms/api/v1/actuator/health         | -                             |  
+| **🗄️ PgAdmin**      | http://localhost:5050                                     | admin@payroll.com / admin123  |   
+| **🗄️ Database**     | http://localhost:5432/payroll_db                                 | payroll_user / payroll_pass   | 
 
 ---
 

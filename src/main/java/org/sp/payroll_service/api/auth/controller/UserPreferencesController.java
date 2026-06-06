@@ -13,6 +13,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
+
 /**
  * REST Controller for user preferences endpoints.
  * Handles retrieval and updates of user UI preferences (theme, language, scope, company).
@@ -37,8 +39,8 @@ public class UserPreferencesController {
     public ResponseEntity<UserPreferencesResponse> getPreferences(
             @AuthenticationPrincipal HeaderResponse principal) {
         log.debug("Fetching preferences for user: {}", principal.userId());
-        UserPreferencesResponse prefs = userPreferenceService.findById(principal.userId());
-        return ResponseEntity.ok(prefs);
+        Optional<UserPreferencesResponse> prefs = userPreferenceService.getUserPreferenceByUserId(principal.userId());
+        return prefs.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
     
     /**
@@ -55,7 +57,7 @@ public class UserPreferencesController {
             @Valid @RequestBody UserPreferencesRequest request,
             @AuthenticationPrincipal HeaderResponse principal) {
         log.info("Updating preferences for user: {}", principal.userId());
-        UserPreferencesResponse updated = userPreferenceService.update(
+        UserPreferencesResponse updated = userPreferenceService.updateUserPreferenceByUserId(
             principal.userId(), 
             request, 
             principal

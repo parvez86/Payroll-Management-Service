@@ -3,7 +3,7 @@ package org.sp.payroll_service.domain.auth.service;
 import org.sp.payroll_service.api.auth.dto.UserPreferencesFilter;
 import org.sp.payroll_service.api.auth.dto.UserPreferencesRequest;
 import org.sp.payroll_service.api.auth.dto.UserPreferencesResponse;
-import org.sp.payroll_service.domain.auth.entity.UserPreferences;
+import org.sp.payroll_service.domain.common.dto.response.HeaderResponse;
 import org.sp.payroll_service.domain.common.enums.PreferenceScope;
 import org.sp.payroll_service.domain.common.enums.Role;
 import org.sp.payroll_service.domain.common.service.BaseCrudService;
@@ -60,4 +60,6 @@ public interface UserPreferenceService extends BaseCrudService<
      * @return the PreferenceScope (GLOBAL or COMPANY)
      */
     PreferenceScope getPreferredScope(UUID userId);
+
+    UserPreferencesResponse updateUserPreferenceByUserId(UUID userId, UserPreferencesRequest request, HeaderResponse principal);
 }

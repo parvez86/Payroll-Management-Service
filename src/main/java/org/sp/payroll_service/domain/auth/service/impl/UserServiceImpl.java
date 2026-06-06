@@ -263,7 +263,7 @@ public class UserServiceImpl extends AbstractCrudService<User, UUID, UserRespons
                     accountResponse,
                     fullName,
                     description,
-                    companyId,
+//                    companyId,
                     companyMap,
                     bizId,
                     preferencesResponse
